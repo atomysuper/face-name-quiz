@@ -45,6 +45,14 @@ function ensureNoError(error: { message: string } | null, context: string): void
   }
 }
 
+function ensureData<T>(data: T | null, context: string): T {
+  if (data === null) {
+    throw new Error(`${context}: 결과 데이터가 비어 있습니다.`);
+  }
+
+  return data;
+}
+
 function normalizeBoundingBox(raw: unknown): BoundingBox {
   const value = (raw ?? {}) as Record<string, unknown>;
   return {
@@ -260,11 +268,13 @@ async function getOrCreatePerson(
 
   ensureNoError(error, '사람 생성 실패');
 
+  const createdPerson = ensureData(data, '사람 생성 결과 확인 실패');
+
   return {
-    id: data.id,
-    name: data.name,
-    aliases: data.aliases ?? [],
-    createdAt: data.created_at,
+    id: createdPerson.id,
+    name: createdPerson.name,
+    aliases: createdPerson.aliases ?? [],
+    createdAt: createdPerson.created_at,
   };
 }
 
@@ -300,6 +310,8 @@ export async function createPhotoAndFaces(params: {
 
   ensureNoError(photoInsertError, 'photos insert 실패');
 
+  const createdPhoto = ensureData(photoRow, 'photos insert 결과 확인 실패');
+
   const faceRows: Array<{
     photo_id: string;
     crop_path: string;
@@ -309,7 +321,7 @@ export async function createPhotoAndFaces(params: {
   }> = [];
 
   for (const crop of params.crops) {
-    const cropPath = `${photoRow.id}/${String(crop.index).padStart(3, '0')}-${crypto.randomUUID()}.jpg`;
+    const cropPath = `${createdPhoto.id}/${String(crop.index).padStart(3, '0')}-${crypto.randomUUID()}.jpg`;
 
     const { error: cropUploadError } = await supabaseAdmin.storage
       .from('face-crops')
@@ -321,7 +333,7 @@ export async function createPhotoAndFaces(params: {
     ensureNoError(cropUploadError, `crop 업로드 실패 (${crop.index})`);
 
     faceRows.push({
-      photo_id: photoRow.id,
+      photo_id: createdPhoto.id,
       crop_path: cropPath,
       bbox: crop.bbox,
       status: 'pending',
@@ -338,7 +350,7 @@ export async function createPhotoAndFaces(params: {
   }
 
   return {
-    photoId: photoRow.id,
+    photoId: createdPhoto.id,
     faceCount: faceRows.length,
   };
 }
