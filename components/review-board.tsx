@@ -279,6 +279,56 @@ export function ReviewBoard() {
     }
   }
 
+
+  async function handleDeleteFace(faceId: string) {
+    const pendingTarget = pendingFaces.find((face) => face.id === faceId);
+    const approvedTarget = approvedFaces.find((face) => face.id === faceId);
+    const target = pendingTarget ?? approvedTarget;
+    const label = target?.personName || forms[faceId]?.personName?.trim() || '이 얼굴';
+
+    const confirmed = window.confirm(`${label} 얼굴을 삭제할까요? 연결된 이름 제보와 퀴즈 기록도 함께 사라집니다.`);
+    if (!confirmed) {
+      return;
+    }
+
+    setSavingFaceId(faceId);
+    setErrorMessage(null);
+    setMessage(null);
+
+    try {
+      const response = await fetch('/api/admin/review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'deleteFace',
+          faceId,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? '얼굴 삭제에 실패했습니다.');
+      }
+
+      setPendingFaces((current) => current.filter((face) => face.id !== faceId));
+      setApprovedFaces((current) => current.filter((face) => face.id !== faceId));
+      setForms((current) => {
+        const next = { ...current };
+        delete next[faceId];
+        return next;
+      });
+
+      setMessage('얼굴을 삭제했습니다.');
+    } catch (error) {
+      setErrorMessage(toErrorMessage(error));
+    } finally {
+      setSavingFaceId(null);
+    }
+  }
+
   if (loading) {
     return <p className="muted-text">검토 목록을 불러오는 중입니다...</p>;
   }
@@ -337,7 +387,7 @@ export function ReviewBoard() {
 
             return (
               <article key={face.id} className="review-card">
-                <img src={face.cropUrl} alt={`검토할 얼굴 ${index + 1}`} />
+                <img src={face.cropUrl} alt={`검토할 얼굴 ${index + 1}`} loading="lazy" />
 
                 <div className="stack-sm">
                   <div className="stack-xs">
@@ -361,13 +411,13 @@ export function ReviewBoard() {
                           personName: event.target.value,
                         })
                       }
-                      placeholder="예: 김민준"
+                      placeholder="예: 드리미"
                     />
                   </div>
 
                   <div className="stack-xs">
                     <label className="label" htmlFor={`aliases-${face.id}`}>
-                      별칭 (쉼표로 구분)
+                      별칭 / 기수 (쉼표로 구분)
                     </label>
                     <input
                       id={`aliases-${face.id}`}
@@ -379,7 +429,7 @@ export function ReviewBoard() {
                           aliasesText: event.target.value,
                         })
                       }
-                      placeholder="예: 민준, 민준이"
+                      placeholder="예: 8기"
                     />
                   </div>
 
@@ -423,14 +473,24 @@ export function ReviewBoard() {
 
                   <div className="row gap-sm wrap">
                     {mode === 'pending' ? (
-                      <button
-                        className="button primary"
-                        type="button"
-                        disabled={savingFaceId === face.id}
-                        onClick={() => void handleApprove(face.id)}
-                      >
-                        {savingFaceId === face.id ? '승인 중...' : '이 이름으로 승인'}
-                      </button>
+                      <>
+                        <button
+                          className="button primary"
+                          type="button"
+                          disabled={savingFaceId === face.id}
+                          onClick={() => void handleApprove(face.id)}
+                        >
+                          {savingFaceId === face.id ? '승인 중...' : '이 이름으로 승인'}
+                        </button>
+                        <button
+                          className="button danger"
+                          type="button"
+                          disabled={savingFaceId === face.id}
+                          onClick={() => void handleDeleteFace(face.id)}
+                        >
+                          삭제
+                        </button>
+                      </>
                     ) : (
                       <>
                         <button
@@ -448,6 +508,14 @@ export function ReviewBoard() {
                           onClick={() => void handleReopen(face.id)}
                         >
                           다시 검토로 보내기
+                        </button>
+                        <button
+                          className="button danger"
+                          type="button"
+                          disabled={savingFaceId === face.id}
+                          onClick={() => void handleDeleteFace(face.id)}
+                        >
+                          삭제
                         </button>
                       </>
                     )}

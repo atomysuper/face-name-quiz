@@ -286,8 +286,8 @@ export function QuizGame() {
           <img src={currentFace.cropUrl} alt="퀴즈 얼굴" />
         </div>
 
-        <div className="card stack-md">
-          <div className="stack-sm">
+        <div className="card stack-md quiz-question-card">
+          <div className="stack-sm quiz-head-block">
             <div className="row gap-sm wrap quiz-mode-tabs">
               <button
                 className={`button ${mode === 'multiple-choice' ? 'primary' : 'ghost'}`}
@@ -313,9 +313,8 @@ export function QuizGame() {
               </button>
             </div>
 
-            <div className="stack-xs">
+            <div className="stack-xs quiz-title-block">
               <h3>이 사람의 이름은?</h3>
-              <p className="muted-text">이번 문제 기회: {triesLeft} / {MAX_TRIES}</p>
               {mode === 'initial-hint' ? (
                 <p className="muted-text">힌트: {initials}</p>
               ) : null}
@@ -323,11 +322,11 @@ export function QuizGame() {
           </div>
 
           {mode === 'multiple-choice' && readyForMultipleChoice ? (
-            <div className="choice-grid">
+            <div className="choice-grid compact-choice-grid">
               {choices.map((choice) => (
                 <button
                   key={`${currentFace.id}-${choice}`}
-                  className="button choice"
+                  className="button choice compact-choice"
                   type="button"
                   onClick={() => void handleAnswer(choice)}
                 >
@@ -336,7 +335,7 @@ export function QuizGame() {
               ))}
             </div>
           ) : (
-            <form className="stack-sm" onSubmit={handleSubmit}>
+            <form className="stack-sm quiz-answer-form" onSubmit={handleSubmit}>
               <input
                 className="input"
                 type="text"
@@ -351,13 +350,13 @@ export function QuizGame() {
             </form>
           )}
 
+          <p className="muted-text small-text quiz-tries-text">이번 문제 기회: {triesLeft} / {MAX_TRIES}</p>
+
           {resultMessage ? (
             <p className={resultMessage.startsWith('정답') ? 'success-text' : 'error-text'}>
               {resultMessage}
             </p>
-          ) : (
-            <p className="muted-text small-text">오답이어도 바로 넘어가지 않고 최대 3번까지 시도할 수 있어요.</p>
-          )}
+          ) : null}
         </div>
       </div>
 

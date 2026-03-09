@@ -137,21 +137,25 @@ export async function listPeople(): Promise<PersonRecord[]> {
   }));
 }
 
-export async function listFaces(
-  status: FaceStatus,
-  limit = 100,
-): Promise<FaceCard[]> {
-  const { data, error } = await supabaseAdmin
-    .from('faces')
-    .select('id, photo_id, crop_path, status, person_id, bbox, created_at, sort_index')
-    .eq('status', status)
-    .order('created_at', { ascending: true })
-    .order('sort_index', { ascending: true })
-    .limit(limit);
+type FaceRow = {
+  id: string;
+  photo_id: string;
+  crop_path: string;
+  status: FaceStatus;
+  person_id: string | null;
+  bbox: unknown;
+  created_at: string;
+  sort_index: number | null;
+};
 
-  ensureNoError(error, 'faces 조회 실패');
+type ListFacesOptions = {
+  status?: FaceStatus;
+  limit?: number;
+  offset?: number;
+  ascending?: boolean;
+};
 
-  const rows = data ?? [];
+async function mapFaceRowsToCards(rows: FaceRow[]): Promise<FaceCard[]> {
   const peopleMap = await loadPeopleMap(
     rows.map((row) => row.person_id).filter(Boolean) as string[],
   );
@@ -176,6 +180,53 @@ export async function listFaces(
       createdAt: row.created_at,
     };
   });
+}
+
+export async function listFacesPage(options: ListFacesOptions = {}): Promise<FaceCard[]> {
+  const {
+    status,
+    limit = 100,
+    offset = 0,
+    ascending = true,
+  } = options;
+
+  let query = supabaseAdmin
+    .from('faces')
+    .select('id, photo_id, crop_path, status, person_id, bbox, created_at, sort_index')
+    .order('created_at', { ascending })
+    .order('sort_index', { ascending: true })
+    .range(offset, offset + Math.max(1, limit) - 1);
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const { data, error } = await query;
+
+  ensureNoError(error, 'faces 조회 실패');
+
+  return mapFaceRowsToCards((data ?? []) as FaceRow[]);
+}
+
+export async function listFaces(
+  status: FaceStatus,
+  limit = 100,
+): Promise<FaceCard[]> {
+  return listFacesPage({ status, limit, offset: 0, ascending: true });
+}
+
+export async function countFaces(status?: FaceStatus): Promise<number> {
+  let query = supabaseAdmin
+    .from('faces')
+    .select('id', { count: 'exact', head: true });
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const { count, error } = await query;
+  ensureNoError(error, 'faces 개수 조회 실패');
+  return count ?? 0;
 }
 
 export async function listPendingFacesForReview(limit = 120): Promise<FaceCard[]> {

@@ -437,6 +437,34 @@ input {
   grid-template-columns: 1fr;
   gap: 10px;
 }
+.compact-choice-grid {
+  gap: 8px;
+}
+
+.compact-choice {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.quiz-head-block {
+  gap: 12px;
+}
+
+.quiz-title-block h3 {
+  margin: 0;
+}
+
+.quiz-tries-text {
+  margin: -4px 0 0;
+}
+
+.manage-toolbar {
+  justify-content: space-between;
+}
+
+.manage-pagination {
+  justify-content: flex-end;
+}
 
 .ordered-list {
   margin: 0;
@@ -509,10 +537,37 @@ input {
     overflow-x: auto;
     flex-wrap: nowrap;
     padding-bottom: 2px;
+    gap: 6px;
   }
 
   .quiz-mode-tabs .button {
     flex: 0 0 auto;
+    padding: 9px 12px;
+  }
+
+  .quiz-question-card {
+    gap: 10px;
+  }
+
+  .quiz-head-block {
+    gap: 8px;
+  }
+
+  .compact-choice-grid {
+    gap: 6px;
+  }
+
+  .compact-choice {
+    padding: 9px 12px;
+    border-radius: 10px;
+  }
+
+  .quiz-answer-form {
+    gap: 10px;
+  }
+
+  .quiz-tries-text {
+    margin-top: -2px;
   }
 
   .photo-preview {

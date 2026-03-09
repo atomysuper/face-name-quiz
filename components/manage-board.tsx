@@ -1,58 +1,87 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { FaceCard } from '@/lib/types';
 import { toErrorMessage } from '@/lib/utils';
 
+type FilterMode = 'all' | 'pending' | 'approved';
+
 type ManageResponse = {
   faces: FaceCard[];
+  totalCount: number;
+  counts: {
+    all: number;
+    pending: number;
+    approved: number;
+  };
+  page: {
+    offset: number;
+    limit: number;
+    hasMore: boolean;
+  };
   error?: string;
 };
 
-type FilterMode = 'all' | 'pending' | 'approved';
+const PAGE_SIZE = 48;
 
 export function ManageBoard() {
   const [faces, setFaces] = useState<FaceCard[]>([]);
   const [filter, setFilter] = useState<FilterMode>('all');
+  const [page, setPage] = useState(0);
+  const [counts, setCounts] = useState({ all: 0, pending: 0, approved: 0 });
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  async function loadData() {
-    setLoading(true);
-    setErrorMessage(null);
+  const loadData = useCallback(
+    async (nextFilter: FilterMode, nextPage: number) => {
+      setLoading(true);
+      setErrorMessage(null);
 
-    try {
-      const response = await fetch('/api/admin/manage-data', {
-        cache: 'no-store',
-      });
-      const payload = (await response.json()) as ManageResponse;
+      try {
+        const statusParam = nextFilter === 'all' ? 'all' : nextFilter;
+        const response = await fetch(
+          `/api/admin/manage-data?status=${statusParam}&limit=${PAGE_SIZE}&offset=${nextPage * PAGE_SIZE}`,
+          {
+            cache: 'no-store',
+          },
+        );
+        const payload = (await response.json()) as ManageResponse;
 
-      if (!response.ok) {
-        throw new Error(payload.error ?? '관리 목록을 불러오지 못했습니다.');
+        if (!response.ok) {
+          throw new Error(payload.error ?? '관리 목록을 불러오지 못했습니다.');
+        }
+
+        setFaces(payload.faces);
+        setCounts(payload.counts);
+        setTotalCount(payload.totalCount);
+        setHasMore(payload.page.hasMore);
+      } catch (error) {
+        setErrorMessage(toErrorMessage(error));
+      } finally {
+        setLoading(false);
       }
-
-      setFaces(payload.faces);
-    } catch (error) {
-      setErrorMessage(toErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
-  }
+    },
+    [],
+  );
 
   useEffect(() => {
-    void loadData();
-  }, []);
+    void loadData(filter, page);
+  }, [filter, page, loadData]);
 
-  const filteredFaces = useMemo(() => {
-    if (filter === 'all') {
-      return faces;
-    }
+  function handleChangeFilter(nextFilter: FilterMode) {
+    setMessage(null);
+    setFilter(nextFilter);
+    setPage(0);
+  }
 
-    return faces.filter((face) => face.status === filter);
-  }, [faces, filter]);
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  }, [totalCount]);
 
   async function handleDelete(faceId: string) {
     const target = faces.find((face) => face.id === faceId);
@@ -84,17 +113,37 @@ export function ManageBoard() {
         throw new Error(payload.error ?? '얼굴 삭제에 실패했습니다.');
       }
 
-      setFaces((current) => current.filter((face) => face.id !== faceId));
+      const deletedStatus = target?.status;
+      const nextCounts = {
+        all: Math.max(0, counts.all - 1),
+        pending:
+          deletedStatus === 'pending'
+            ? Math.max(0, counts.pending - 1)
+            : counts.pending,
+        approved:
+          deletedStatus === 'approved'
+            ? Math.max(0, counts.approved - 1)
+            : counts.approved,
+      };
+
+      const nextTotalCount = Math.max(0, totalCount - 1);
+      const currentPageWouldBeEmpty = faces.length <= 1 && page > 0;
+
+      setCounts(nextCounts);
+      setTotalCount(nextTotalCount);
       setMessage('얼굴 항목을 삭제했습니다.');
+
+      if (currentPageWouldBeEmpty) {
+        setPage((current) => Math.max(0, current - 1));
+      } else {
+        setFaces((current) => current.filter((face) => face.id !== faceId));
+        void loadData(filter, page);
+      }
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
     } finally {
       setWorkingId(null);
     }
-  }
-
-  if (loading) {
-    return <p className="muted-text">관리 목록을 불러오는 중입니다...</p>;
   }
 
   return (
@@ -104,48 +153,78 @@ export function ManageBoard() {
           <button
             className={`button ${filter === 'all' ? 'primary' : 'ghost'}`}
             type="button"
-            onClick={() => setFilter('all')}
+            onClick={() => handleChangeFilter('all')}
           >
-            전체 {faces.length}
+            전체 {counts.all}
           </button>
           <button
             className={`button ${filter === 'pending' ? 'primary' : 'ghost'}`}
             type="button"
-            onClick={() => setFilter('pending')}
+            onClick={() => handleChangeFilter('pending')}
           >
-            검토 대기 {faces.filter((face) => face.status === 'pending').length}
+            검토 대기 {counts.pending}
           </button>
           <button
             className={`button ${filter === 'approved' ? 'primary' : 'ghost'}`}
             type="button"
-            onClick={() => setFilter('approved')}
+            onClick={() => handleChangeFilter('approved')}
           >
-            승인 완료 {faces.filter((face) => face.status === 'approved').length}
+            승인 완료 {counts.approved}
           </button>
-          <button className="button ghost" type="button" onClick={() => void loadData()}>
+          <button className="button ghost" type="button" onClick={() => void loadData(filter, page)}>
             새로고침
           </button>
         </div>
         <p className="muted-text">
-          잘못 올린 얼굴을 여기서 삭제할 수 있습니다. 같은 원본 사진에 얼굴이 하나도 남지 않으면 원본 사진도 함께 정리됩니다.
+          한 번에 모든 사진을 다 불러오지 않고 현재 페이지만 가져오도록 바꿔서 훨씬 빨라졌습니다. 잘못 올린 얼굴은 여기서 삭제할 수 있습니다.
         </p>
       </div>
 
       {message ? <p className="success-text">{message}</p> : null}
       {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
 
-      {filteredFaces.length === 0 ? (
+      <div className="row gap-sm wrap space-between manage-toolbar">
+        <p className="muted-text small-text">
+          총 {totalCount}개 중 {totalCount === 0 ? 0 : page * PAGE_SIZE + 1}
+          {` - ${totalCount === 0 ? 0 : Math.min(totalCount, (page + 1) * PAGE_SIZE)}`} 표시
+        </p>
+        <div className="row gap-sm wrap manage-pagination">
+          <button
+            className="button ghost"
+            type="button"
+            disabled={loading || page === 0}
+            onClick={() => setPage((current) => Math.max(0, current - 1))}
+          >
+            이전
+          </button>
+          <span className="small-text muted-text">
+            {page + 1} / {totalPages}
+          </span>
+          <button
+            className="button ghost"
+            type="button"
+            disabled={loading || !hasMore}
+            onClick={() => setPage((current) => current + 1)}
+          >
+            다음
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <p className="muted-text">관리 목록을 불러오는 중입니다...</p>
+      ) : faces.length === 0 ? (
         <div className="card">
           <p>표시할 얼굴이 없습니다.</p>
         </div>
       ) : (
         <div className="review-grid">
-          {filteredFaces.map((face, index) => (
+          {faces.map((face, index) => (
             <article key={face.id} className="review-card">
-              <img src={face.cropUrl} alt={`관리 얼굴 ${index + 1}`} />
+              <img src={face.cropUrl} alt={`관리 얼굴 ${index + 1}`} loading="lazy" />
               <div className="stack-sm">
                 <div className="stack-xs">
-                  <p className="small-text">#{index + 1}</p>
+                  <p className="small-text">#{page * PAGE_SIZE + index + 1}</p>
                   <p className="small-text muted-text">{face.photoLabel ?? '사진 이름 없음'}</p>
                   <p className="small-text muted-text">상태: {face.status === 'approved' ? '승인 완료' : '검토 대기'}</p>
                   <p className="small-text muted-text">이름: {face.personName ?? '미지정'}</p>
