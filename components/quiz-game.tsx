@@ -281,43 +281,45 @@ export function QuizGame() {
 
   return (
     <section className="stack-lg">
-      <div className="card row gap-sm wrap">
-        <button
-          className={`button ${mode === 'multiple-choice' ? 'primary' : 'ghost'}`}
-          type="button"
-          disabled={!readyForMultipleChoice}
-          onClick={() => setMode('multiple-choice')}
-        >
-          객관식
-        </button>
-        <button
-          className={`button ${mode === 'initial-hint' ? 'primary' : 'ghost'}`}
-          type="button"
-          onClick={() => setMode('initial-hint')}
-        >
-          초성 힌트
-        </button>
-        <button
-          className={`button ${mode === 'typed' ? 'primary' : 'ghost'}`}
-          type="button"
-          onClick={() => setMode('typed')}
-        >
-          주관식
-        </button>
-      </div>
-
       <div className="quiz-shell quiz-shell-top">
         <div className="card quiz-face-card">
           <img src={currentFace.cropUrl} alt="퀴즈 얼굴" />
         </div>
 
         <div className="card stack-md">
-          <div className="stack-xs">
-            <h3>이 사람의 이름은?</h3>
-            <p className="muted-text">이번 문제 기회: {triesLeft} / {MAX_TRIES}</p>
-            {mode === 'initial-hint' ? (
-              <p className="muted-text">힌트: {initials}</p>
-            ) : null}
+          <div className="stack-sm">
+            <div className="row gap-sm wrap quiz-mode-tabs">
+              <button
+                className={`button ${mode === 'multiple-choice' ? 'primary' : 'ghost'}`}
+                type="button"
+                disabled={!readyForMultipleChoice}
+                onClick={() => setMode('multiple-choice')}
+              >
+                객관식
+              </button>
+              <button
+                className={`button ${mode === 'initial-hint' ? 'primary' : 'ghost'}`}
+                type="button"
+                onClick={() => setMode('initial-hint')}
+              >
+                초성 힌트
+              </button>
+              <button
+                className={`button ${mode === 'typed' ? 'primary' : 'ghost'}`}
+                type="button"
+                onClick={() => setMode('typed')}
+              >
+                주관식
+              </button>
+            </div>
+
+            <div className="stack-xs">
+              <h3>이 사람의 이름은?</h3>
+              <p className="muted-text">이번 문제 기회: {triesLeft} / {MAX_TRIES}</p>
+              {mode === 'initial-hint' ? (
+                <p className="muted-text">힌트: {initials}</p>
+              ) : null}
+            </div>
           </div>
 
           {mode === 'multiple-choice' && readyForMultipleChoice ? (

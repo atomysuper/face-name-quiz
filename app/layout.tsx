@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+
+import { SiteHeader } from '@/components/site-header';
 
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '얼굴 이름 퀴즈',
-  description: '단체사진 얼굴 추출과 이름 퀴즈를 위한 내부용 웹앱',
+  title: '드리미학교',
+  description: '드리미학교 학생 얼굴과 이름을 익히기 위한 내부용 웹앱',
 };
 
 export default function RootLayout({
@@ -16,22 +17,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
-        <header className="site-header">
-          <div className="container header-inner">
-            <Link href="/" className="brand">
-              얼굴 이름 퀴즈
-            </Link>
-
-            <nav className="nav-links">
-              <Link href="/admin/upload">업로드</Link>
-              <Link href="/admin/review">검토</Link>
-              <Link href="/admin/manage">관리</Link>
-              <Link href="/contribute">이름 제보</Link>
-              <Link href="/quiz">퀴즈</Link>
-            </nav>
-          </div>
-        </header>
-
+        <SiteHeader />
         <main className="container page-shell">{children}</main>
       </body>
     </html>

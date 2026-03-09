@@ -169,6 +169,8 @@ export function PhotoImporter() {
       return;
     }
 
+    event.preventDefault();
+
     const point = getRelativePosition(event);
     if (!point) {
       return;
@@ -187,6 +189,8 @@ export function PhotoImporter() {
     if (!dragState) {
       return;
     }
+
+    event.preventDefault();
 
     const point = getRelativePosition(event);
     if (!point) {
@@ -208,6 +212,11 @@ export function PhotoImporter() {
     if (!dragState || !selectedFile || !imageSize) {
       setDragState(null);
       return;
+    }
+
+    event.preventDefault();
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
     }
 
     const point = getRelativePosition(event);
@@ -412,31 +421,35 @@ export function PhotoImporter() {
             </p>
           </div>
 
-          <div
-            className={`photo-stage ${manualMode ? 'manual-on' : ''}`}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-          >
-            <img
-              ref={imageRef}
-              className="photo-preview"
-              src={photoPreviewUrl}
-              alt="원본 단체사진 미리보기"
-              onLoad={(event) =>
-                setImageSize({
-                  width: event.currentTarget.naturalWidth,
-                  height: event.currentTarget.naturalHeight,
-                })
-              }
-            />
-            <div className="photo-overlay">
-              {activeCrops.map((crop) =>
-                renderOverlayBox(crop.bbox, crop.id, crop.source === 'manual' ? 'manual' : 'auto'),
-              )}
-              {draftBox ? renderOverlayBox(draftBox, 'draft', 'draft') : null}
+          <div className="photo-stage-wrap">
+            <div
+              className={`photo-stage ${manualMode ? 'manual-on' : ''}`}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+            >
+              <img
+                ref={imageRef}
+                className="photo-preview"
+                src={photoPreviewUrl}
+                alt="원본 단체사진 미리보기"
+                draggable={false}
+                onLoad={(event) =>
+                  setImageSize({
+                    width: event.currentTarget.naturalWidth,
+                    height: event.currentTarget.naturalHeight,
+                  })
+                }
+              />
+              <div className="photo-overlay">
+                {activeCrops.map((crop) =>
+                  renderOverlayBox(crop.bbox, crop.id, crop.source === 'manual' ? 'manual' : 'auto'),
+                )}
+                {draftBox ? renderOverlayBox(draftBox, 'draft', 'draft') : null}
+              </div>
             </div>
           </div>
+          <p className="muted-text small-text">모바일에서는 손가락으로 한번 크게 확대해서 위치를 확인한 뒤, 얼굴보다 조금 넉넉하게 드래그하면 수동 박스가 더 잘 맞습니다.</p>
         </div>
       ) : null}
 
