@@ -416,3 +416,26 @@ input {
     justify-content: flex-start;
   }
 }
+
+
+.photo-stage {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.photo-stage.manual-on {
+  cursor: crosshair;
+}
+
+.photo-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.overlay-box {
+  position: absolute;
+  border: 2px solid var(--primary);
+  border-radius: 10px;
+}

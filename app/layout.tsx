@@ -25,6 +25,7 @@ export default function RootLayout({
             <nav className="nav-links">
               <Link href="/admin/upload">업로드</Link>
               <Link href="/admin/review">검토</Link>
+              <Link href="/admin/manage">관리</Link>
               <Link href="/contribute">이름 제보</Link>
               <Link href="/quiz">퀴즈</Link>
             </nav>

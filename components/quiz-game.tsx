@@ -19,6 +19,7 @@ type FacesResponse = {
 type QuizMode = 'multiple-choice' | 'initial-hint' | 'typed';
 
 const STORAGE_KEY = 'face-quiz-progress-v1';
+const MAX_TRIES = 3;
 
 function loadProgress(): QuizProgressMap {
   if (typeof window === 'undefined') {
@@ -54,6 +55,7 @@ export function QuizGame() {
   const [sessionCorrect, setSessionCorrect] = useState(0);
   const [sessionWrong, setSessionWrong] = useState(0);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
+  const [attemptNumber, setAttemptNumber] = useState(1);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const startedAtRef = useRef<number>(Date.now());
@@ -63,6 +65,7 @@ export function QuizGame() {
   const modeRef = useRef<QuizMode>('multiple-choice');
 
   const readyForMultipleChoice = faces.length >= 4;
+  const triesLeft = MAX_TRIES - attemptNumber + 1;
 
   const accuracy = useMemo(() => {
     const total = sessionCorrect + sessionWrong;
@@ -90,6 +93,7 @@ export function QuizGame() {
       setCurrentFace(nextFace);
       setGuess('');
       setResultMessage(null);
+      setAttemptNumber(1);
       startedAtRef.current = Date.now();
 
       if (activeMode === 'multiple-choice' && activeFaces.length >= 4) {
@@ -153,6 +157,7 @@ export function QuizGame() {
           const firstFace = selectNextFace(approvedFaces, savedProgress);
           if (firstFace) {
             setCurrentFace(firstFace);
+            setAttemptNumber(1);
             startedAtRef.current = Date.now();
             setChoices(
               approvedFaces.length >= 4
@@ -183,18 +188,12 @@ export function QuizGame() {
     }
   }, [mode, currentFace, faces]);
 
-  async function handleAnswer(answer: string) {
+  async function finalizeAnswer(answer: string, correct: boolean) {
     if (!currentFace) {
       return;
     }
 
     const responseMs = Date.now() - startedAtRef.current;
-    const correct = isCorrectAnswer(
-      answer,
-      currentFace.personName,
-      currentFace.aliases,
-    );
-
     const nextProgress = applyAttempt(progress, currentFace.id, correct, responseMs);
     setProgress(nextProgress);
     saveProgress(nextProgress);
@@ -225,6 +224,35 @@ export function QuizGame() {
     scheduleNextQuestion(currentFace.id, nextProgress);
   }
 
+  async function handleAnswer(answer: string) {
+    if (!currentFace) {
+      return;
+    }
+
+    const correct = isCorrectAnswer(
+      answer,
+      currentFace.personName,
+      currentFace.aliases,
+    );
+
+    if (correct) {
+      await finalizeAnswer(answer, true);
+      return;
+    }
+
+    if (attemptNumber < MAX_TRIES) {
+      const remaining = MAX_TRIES - attemptNumber;
+      setAttemptNumber((value) => value + 1);
+      setResultMessage(`아직 아니에요. ${remaining}번 더 도전할 수 있어요.`);
+      if (mode !== 'multiple-choice') {
+        setGuess('');
+      }
+      return;
+    }
+
+    await finalizeAnswer(answer, false);
+  }
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!guess.trim()) {
@@ -253,25 +281,6 @@ export function QuizGame() {
 
   return (
     <section className="stack-lg">
-      <div className="stats-grid">
-        <div className="card stack-xs">
-          <p className="label">이번 세션 정답</p>
-          <strong>{sessionCorrect}</strong>
-        </div>
-        <div className="card stack-xs">
-          <p className="label">이번 세션 오답</p>
-          <strong>{sessionWrong}</strong>
-        </div>
-        <div className="card stack-xs">
-          <p className="label">정답률</p>
-          <strong>{accuracy}%</strong>
-        </div>
-        <div className="card stack-xs">
-          <p className="label">등록된 얼굴</p>
-          <strong>{faces.length}</strong>
-        </div>
-      </div>
-
       <div className="card row gap-sm wrap">
         <button
           className={`button ${mode === 'multiple-choice' ? 'primary' : 'ghost'}`}
@@ -297,7 +306,7 @@ export function QuizGame() {
         </button>
       </div>
 
-      <div className="quiz-shell">
+      <div className="quiz-shell quiz-shell-top">
         <div className="card quiz-face-card">
           <img src={currentFace.cropUrl} alt="퀴즈 얼굴" />
         </div>
@@ -305,6 +314,7 @@ export function QuizGame() {
         <div className="card stack-md">
           <div className="stack-xs">
             <h3>이 사람의 이름은?</h3>
+            <p className="muted-text">이번 문제 기회: {triesLeft} / {MAX_TRIES}</p>
             {mode === 'initial-hint' ? (
               <p className="muted-text">힌트: {initials}</p>
             ) : null}
@@ -314,7 +324,7 @@ export function QuizGame() {
             <div className="choice-grid">
               {choices.map((choice) => (
                 <button
-                  key={choice}
+                  key={`${currentFace.id}-${choice}`}
                   className="button choice"
                   type="button"
                   onClick={() => void handleAnswer(choice)}
@@ -339,7 +349,32 @@ export function QuizGame() {
             </form>
           )}
 
-          {resultMessage ? <p className="success-text">{resultMessage}</p> : null}
+          {resultMessage ? (
+            <p className={resultMessage.startsWith('정답') ? 'success-text' : 'error-text'}>
+              {resultMessage}
+            </p>
+          ) : (
+            <p className="muted-text small-text">오답이어도 바로 넘어가지 않고 최대 3번까지 시도할 수 있어요.</p>
+          )}
+        </div>
+      </div>
+
+      <div className="stats-grid">
+        <div className="card stack-xs">
+          <p className="label">이번 세션 정답</p>
+          <strong>{sessionCorrect}</strong>
+        </div>
+        <div className="card stack-xs">
+          <p className="label">이번 세션 오답</p>
+          <strong>{sessionWrong}</strong>
+        </div>
+        <div className="card stack-xs">
+          <p className="label">정답률</p>
+          <strong>{accuracy}%</strong>
+        </div>
+        <div className="card stack-xs">
+          <p className="label">등록된 얼굴</p>
+          <strong>{faces.length}</strong>
         </div>
       </div>
     </section>

@@ -11,20 +11,24 @@ type ReviewFormState = {
   approvedSubmissionId: string | null;
 };
 
+type Mode = 'pending' | 'approved';
+
 function getInitialFormState(face: FaceCard): ReviewFormState {
   const topSubmission = face.submissions?.[0];
 
   return {
-    personName: topSubmission?.submittedName ?? '',
-    aliasesText: '',
+    personName: face.personName ?? topSubmission?.submittedName ?? '',
+    aliasesText: (face.aliases ?? []).join(', '),
     approvedSubmissionId: topSubmission?.id ?? null,
   };
 }
 
 export function ReviewBoard() {
-  const [faces, setFaces] = useState<FaceCard[]>([]);
+  const [pendingFaces, setPendingFaces] = useState<FaceCard[]>([]);
+  const [approvedFaces, setApprovedFaces] = useState<FaceCard[]>([]);
   const [peopleNames, setPeopleNames] = useState<string[]>([]);
   const [forms, setForms] = useState<Record<string, ReviewFormState>>({});
+  const [mode, setMode] = useState<Mode>('pending');
   const [loading, setLoading] = useState(true);
   const [savingFaceId, setSavingFaceId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -46,11 +50,12 @@ export function ReviewBoard() {
         throw new Error(payload.error ?? '검토 목록을 불러오지 못했습니다.');
       }
 
-      setFaces(payload.faces);
+      setPendingFaces(payload.pendingFaces);
+      setApprovedFaces(payload.approvedFaces);
       setPeopleNames(payload.people.map((person) => person.name));
 
       const nextForms: Record<string, ReviewFormState> = {};
-      for (const face of payload.faces) {
+      for (const face of [...payload.pendingFaces, ...payload.approvedFaces]) {
         nextForms[face.id] = getInitialFormState(face);
       }
       setForms(nextForms);
@@ -64,8 +69,6 @@ export function ReviewBoard() {
   useEffect(() => {
     void loadData();
   }, []);
-
-  const pendingCount = faces.length;
 
   const dataListId = useMemo(() => 'people-name-options', []);
 
@@ -116,8 +119,115 @@ export function ReviewBoard() {
         throw new Error(payload.error ?? '얼굴 승인에 실패했습니다.');
       }
 
-      setFaces((current) => current.filter((face) => face.id !== faceId));
+      const approved = pendingFaces.find((face) => face.id === faceId);
+      setPendingFaces((current) => current.filter((face) => face.id !== faceId));
+      if (approved) {
+        setApprovedFaces((current) => [
+          {
+            ...approved,
+            personName: form.personName,
+            aliases: parseAliases(form.aliasesText),
+            personId: payload.person?.id ?? approved.personId,
+            status: 'approved',
+          },
+          ...current,
+        ]);
+      }
       setMessage(`승인 완료: ${form.personName}`);
+    } catch (error) {
+      setErrorMessage(toErrorMessage(error));
+    } finally {
+      setSavingFaceId(null);
+    }
+  }
+
+  async function handleUpdateApproved(faceId: string) {
+    const form = forms[faceId];
+    if (!form?.personName?.trim()) {
+      setErrorMessage('수정할 이름을 입력해주세요.');
+      return;
+    }
+
+    setSavingFaceId(faceId);
+    setErrorMessage(null);
+    setMessage(null);
+
+    try {
+      const response = await fetch('/api/admin/review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'updateApprovedFace',
+          faceId,
+          personName: form.personName,
+          aliases: parseAliases(form.aliasesText),
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? '승인된 얼굴 수정에 실패했습니다.');
+      }
+
+      setApprovedFaces((current) =>
+        current.map((face) =>
+          face.id === faceId
+            ? {
+                ...face,
+                personName: form.personName,
+                aliases: parseAliases(form.aliasesText),
+                personId: payload.person?.id ?? face.personId,
+              }
+            : face,
+        ),
+      );
+      setMessage(`수정 완료: ${form.personName}`);
+    } catch (error) {
+      setErrorMessage(toErrorMessage(error));
+    } finally {
+      setSavingFaceId(null);
+    }
+  }
+
+  async function handleReopen(faceId: string) {
+    setSavingFaceId(faceId);
+    setErrorMessage(null);
+    setMessage(null);
+
+    try {
+      const response = await fetch('/api/admin/review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'reopenFace',
+          faceId,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? '다시 검토 상태로 돌리지 못했습니다.');
+      }
+
+      const target = approvedFaces.find((face) => face.id === faceId);
+      setApprovedFaces((current) => current.filter((face) => face.id !== faceId));
+      if (target) {
+        setPendingFaces((current) => [
+          {
+            ...target,
+            status: 'pending',
+            personId: null,
+            personName: null,
+          },
+          ...current,
+        ]);
+        setMode('pending');
+      }
+      setMessage('다시 이름 검토 대상으로 돌렸습니다.');
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
     } finally {
@@ -148,7 +258,7 @@ export function ReviewBoard() {
         throw new Error(payload.error ?? '제출 삭제에 실패했습니다.');
       }
 
-      setFaces((current) =>
+      setPendingFaces((current) =>
         current.map((face) =>
           face.id === faceId
             ? {
@@ -173,19 +283,34 @@ export function ReviewBoard() {
     return <p className="muted-text">검토 목록을 불러오는 중입니다...</p>;
   }
 
+  const activeFaces = mode === 'pending' ? pendingFaces : approvedFaces;
+
   return (
     <section className="stack-lg">
-      <div className="card row space-between wrap">
-        <div className="stack-xs">
-          <h3>검토 대기 얼굴</h3>
-          <p className="muted-text">
-            현재 {pendingCount}개의 얼굴이 이름 승인을 기다리고 있습니다.
-          </p>
+      <div className="card stack-sm">
+        <div className="row gap-sm wrap">
+          <button
+            className={`button ${mode === 'pending' ? 'primary' : 'ghost'}`}
+            type="button"
+            onClick={() => setMode('pending')}
+          >
+            검토 대기 {pendingFaces.length}
+          </button>
+          <button
+            className={`button ${mode === 'approved' ? 'primary' : 'ghost'}`}
+            type="button"
+            onClick={() => setMode('approved')}
+          >
+            승인 완료 {approvedFaces.length}
+          </button>
+          <button className="button ghost" type="button" onClick={() => void loadData()}>
+            새로고침
+          </button>
         </div>
 
-        <button className="button ghost" type="button" onClick={() => void loadData()}>
-          새로고침
-        </button>
+        <p className="muted-text">
+          자동 추출이 부족하면 업로드 화면에서 수동 박스를 추가하고, 여기서는 이미 승인한 얼굴도 언제든 다시 수정할 수 있습니다.
+        </p>
       </div>
 
       {message ? <p className="success-text">{message}</p> : null}
@@ -197,13 +322,17 @@ export function ReviewBoard() {
         ))}
       </datalist>
 
-      {faces.length === 0 ? (
+      {activeFaces.length === 0 ? (
         <div className="card">
-          <p>검토할 얼굴이 없습니다. 이름 제보가 쌓이면 여기서 승인할 수 있습니다.</p>
+          <p>
+            {mode === 'pending'
+              ? '검토할 얼굴이 없습니다. 이름 제보가 쌓이면 여기서 승인할 수 있습니다.'
+              : '승인된 얼굴이 아직 없습니다.'}
+          </p>
         </div>
       ) : (
         <div className="review-grid">
-          {faces.map((face, index) => {
+          {activeFaces.map((face, index) => {
             const form = forms[face.id] ?? getInitialFormState(face);
 
             return (
@@ -213,9 +342,8 @@ export function ReviewBoard() {
                 <div className="stack-sm">
                   <div className="stack-xs">
                     <p className="small-text">#{index + 1}</p>
-                    <p className="small-text muted-text">
-                      {face.photoLabel ?? '사진 이름 없음'}
-                    </p>
+                    <p className="small-text muted-text">{face.photoLabel ?? '사진 이름 없음'}</p>
+                    <p className="small-text muted-text">현재 상태: {mode === 'pending' ? '검토 대기' : '승인 완료'}</p>
                   </div>
 
                   <div className="stack-xs">
@@ -255,50 +383,75 @@ export function ReviewBoard() {
                     />
                   </div>
 
-                  <div className="stack-xs">
-                    <p className="label">제출된 이름</p>
-                    {(face.submissions ?? []).length === 0 ? (
-                      <p className="muted-text small-text">아직 제출이 없습니다.</p>
-                    ) : (
-                      <div className="submission-list">
-                        {(face.submissions ?? []).map((submission) => (
-                          <div key={submission.id} className="submission-chip">
-                            <button
-                              className="chip-button"
-                              type="button"
-                              onClick={() =>
-                                updateFaceForm(face.id, {
-                                  personName: submission.submittedName,
-                                  approvedSubmissionId: submission.id,
-                                })
-                              }
-                            >
-                              {submission.submittedName}
-                              {submission.submittedBy ? ` · ${submission.submittedBy}` : ''}
-                            </button>
+                  {mode === 'pending' ? (
+                    <div className="stack-xs">
+                      <p className="label">제출된 이름</p>
+                      {(face.submissions ?? []).length === 0 ? (
+                        <p className="muted-text small-text">아직 제출이 없습니다.</p>
+                      ) : (
+                        <div className="submission-list">
+                          {(face.submissions ?? []).map((submission) => (
+                            <div key={submission.id} className="submission-chip">
+                              <button
+                                className="chip-button"
+                                type="button"
+                                onClick={() =>
+                                  updateFaceForm(face.id, {
+                                    personName: submission.submittedName,
+                                    approvedSubmissionId: submission.id,
+                                  })
+                                }
+                              >
+                                {submission.submittedName}
+                                {submission.submittedBy ? ` · ${submission.submittedBy}` : ''}
+                              </button>
 
-                            <button
-                              className="chip-delete"
-                              type="button"
-                              onClick={() => void handleDeleteSubmission(face.id, submission.id)}
-                              title="이 제출 삭제"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                              <button
+                                className="chip-delete"
+                                type="button"
+                                onClick={() => void handleDeleteSubmission(face.id, submission.id)}
+                                title="이 제출 삭제"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+
+                  <div className="row gap-sm wrap">
+                    {mode === 'pending' ? (
+                      <button
+                        className="button primary"
+                        type="button"
+                        disabled={savingFaceId === face.id}
+                        onClick={() => void handleApprove(face.id)}
+                      >
+                        {savingFaceId === face.id ? '승인 중...' : '이 이름으로 승인'}
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          className="button primary"
+                          type="button"
+                          disabled={savingFaceId === face.id}
+                          onClick={() => void handleUpdateApproved(face.id)}
+                        >
+                          {savingFaceId === face.id ? '수정 중...' : '이름 수정 저장'}
+                        </button>
+                        <button
+                          className="button ghost"
+                          type="button"
+                          disabled={savingFaceId === face.id}
+                          onClick={() => void handleReopen(face.id)}
+                        >
+                          다시 검토로 보내기
+                        </button>
+                      </>
                     )}
                   </div>
-
-                  <button
-                    className="button primary"
-                    type="button"
-                    disabled={savingFaceId === face.id}
-                    onClick={() => void handleApprove(face.id)}
-                  >
-                    {savingFaceId === face.id ? '승인 중...' : '이 이름으로 승인'}
-                  </button>
                 </div>
               </article>
             );

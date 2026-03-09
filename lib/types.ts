@@ -12,6 +12,7 @@ export type DetectedCrop = {
   bbox: BoundingBox;
   blob: Blob;
   previewUrl: string;
+  source: 'auto' | 'manual';
 };
 
 export type PersonRecord = {
@@ -46,7 +47,8 @@ export type FaceCard = {
 };
 
 export type ReviewDataResponse = {
-  faces: FaceCard[];
+  pendingFaces: FaceCard[];
+  approvedFaces: FaceCard[];
   people: PersonRecord[];
 };
 

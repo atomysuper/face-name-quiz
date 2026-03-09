@@ -45,6 +45,6 @@ export function getPublicEnv() {
       'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm',
     modelPath:
       process.env.NEXT_PUBLIC_MEDIAPIPE_MODEL_PATH ??
-      '/models/face_detection_short_range.tflite',
+      '/models/blaze_face_short_range.tflite',
   };
 }

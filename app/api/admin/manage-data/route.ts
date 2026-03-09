@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { rejectUnlessAdmin } from '@/lib/admin-auth';
-import { listFaces, listPendingFacesForReview, listPeople } from '@/lib/supabase-admin';
+import { listFaces } from '@/lib/supabase-admin';
 import { toErrorMessage } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -13,14 +13,15 @@ export async function GET() {
   }
 
   try {
-    const [pendingFaces, approvedFaces, people] = await Promise.all([
-      listPendingFacesForReview(150),
-      listFaces('approved', 250),
-      listPeople(),
+    const [pendingFaces, approvedFaces] = await Promise.all([
+      listFaces('pending', 300),
+      listFaces('approved', 500),
     ]);
 
     return NextResponse.json(
-      { pendingFaces, approvedFaces, people },
+      {
+        faces: [...pendingFaces, ...approvedFaces],
+      },
       {
         headers: {
           'Cache-Control': 'no-store',

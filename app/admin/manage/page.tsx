@@ -1,10 +1,10 @@
 import Link from 'next/link';
 
 import { AdminLogoutButton } from '@/components/admin-logout-button';
-import { ReviewBoard } from '@/components/review-board';
+import { ManageBoard } from '@/components/manage-board';
 import { requireAdminPage } from '@/lib/admin-auth';
 
-export default async function AdminReviewPage() {
+export default async function AdminManagePage() {
   await requireAdminPage();
 
   return (
@@ -12,10 +12,8 @@ export default async function AdminReviewPage() {
       <div className="row space-between wrap">
         <div className="stack-xs">
           <span className="badge">관리자 전용</span>
-          <h1>이름 제출 검토</h1>
-          <p className="lead">
-            제보된 이름 중 맞는 이름을 선택하거나 직접 입력해서 승인하세요.
-          </p>
+          <h1>얼굴 관리</h1>
+          <p className="lead">잘못 올린 얼굴을 삭제하고 현재 등록 상태를 정리할 수 있습니다.</p>
         </div>
 
         <AdminLogoutButton />
@@ -25,15 +23,12 @@ export default async function AdminReviewPage() {
         <Link className="button ghost" href="/admin/upload">
           업로드로 이동
         </Link>
-        <Link className="button ghost" href="/admin/manage">
-          관리 페이지 보기
-        </Link>
-        <Link className="button ghost" href="/quiz">
-          퀴즈 페이지 보기
+        <Link className="button ghost" href="/admin/review">
+          검토로 이동
         </Link>
       </div>
 
-      <ReviewBoard />
+      <ManageBoard />
     </section>
   );
 }

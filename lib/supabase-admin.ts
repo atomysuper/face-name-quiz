@@ -413,6 +413,99 @@ export async function approveFaceWithName(params: {
   return person;
 }
 
+
+export async function updateApprovedFace(params: {
+  faceId: string;
+  personName: string;
+  aliases?: string[];
+}): Promise<PersonRecord> {
+  const person = await getOrCreatePerson(params.personName, params.aliases ?? []);
+
+  const { error } = await supabaseAdmin
+    .from('faces')
+    .update({
+      person_id: person.id,
+      status: 'approved',
+    })
+    .eq('id', params.faceId);
+
+  ensureNoError(error, '승인 얼굴 수정 실패');
+
+  return person;
+}
+
+export async function reopenApprovedFace(faceId: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('faces')
+    .update({
+      person_id: null,
+      status: 'pending',
+    })
+    .eq('id', faceId);
+
+  ensureNoError(error, '승인 얼굴을 다시 검토 상태로 변경하지 못했습니다.');
+}
+
+
+export async function deleteFace(faceId: string): Promise<void> {
+  const { data: faceRow, error: fetchError } = await supabaseAdmin
+    .from('faces')
+    .select('id, photo_id, crop_path')
+    .eq('id', faceId)
+    .maybeSingle();
+
+  ensureNoError(fetchError, '삭제할 face 조회 실패');
+
+  if (!faceRow) {
+    throw new Error('삭제할 얼굴을 찾지 못했습니다.');
+  }
+
+  const { error: deleteError } = await supabaseAdmin
+    .from('faces')
+    .delete()
+    .eq('id', faceId);
+
+  ensureNoError(deleteError, '얼굴 삭제 실패');
+
+  const { error: storageError } = await supabaseAdmin.storage
+    .from('face-crops')
+    .remove([faceRow.crop_path]);
+
+  ensureNoError(storageError, '얼굴 이미지 삭제 실패');
+
+  const { count, error: countError } = await supabaseAdmin
+    .from('faces')
+    .select('id', { count: 'exact', head: true })
+    .eq('photo_id', faceRow.photo_id);
+
+  ensureNoError(countError, '남은 얼굴 수 확인 실패');
+
+  if ((count ?? 0) === 0) {
+    const { data: photoRow, error: photoFetchError } = await supabaseAdmin
+      .from('photos')
+      .select('id, original_path')
+      .eq('id', faceRow.photo_id)
+      .maybeSingle();
+
+    ensureNoError(photoFetchError, '원본 사진 조회 실패');
+
+    if (photoRow) {
+      const { error: photoDeleteError } = await supabaseAdmin
+        .from('photos')
+        .delete()
+        .eq('id', photoRow.id);
+
+      ensureNoError(photoDeleteError, '원본 사진 레코드 삭제 실패');
+
+      const { error: originalStorageError } = await supabaseAdmin.storage
+        .from('group-photos')
+        .remove([photoRow.original_path]);
+
+      ensureNoError(originalStorageError, '원본 사진 파일 삭제 실패');
+    }
+  }
+}
+
 export async function deleteSubmission(submissionId: string): Promise<void> {
   const { error } = await supabaseAdmin
     .from('name_submissions')
