@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   applyAttempt,
@@ -18,6 +18,7 @@ type FacesResponse = {
 };
 
 type QuizMode = 'multiple-choice' | 'initial-hint' | 'typed';
+type ResultTone = 'correct' | 'wrong' | null;
 
 const STORAGE_KEY = 'face-quiz-progress-v1';
 const MAX_TRIES = 3;
@@ -60,6 +61,7 @@ export function QuizGame() {
   const [sessionCorrect, setSessionCorrect] = useState(0);
   const [sessionWrong, setSessionWrong] = useState(0);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
+  const [resultTone, setResultTone] = useState<ResultTone>(null);
   const [attemptNumber, setAttemptNumber] = useState(1);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -72,13 +74,12 @@ export function QuizGame() {
   const readyForMultipleChoice = faces.length >= 4;
   const triesLeft = MAX_TRIES - attemptNumber + 1;
 
-  const accuracy = useMemo(() => {
-    const total = sessionCorrect + sessionWrong;
-    if (total === 0) {
-      return 0;
-    }
-    return Math.round((sessionCorrect / total) * 100);
-  }, [sessionCorrect, sessionWrong]);
+  function resetQuestionVisuals() {
+    setGuess('');
+    setResultMessage(null);
+    setResultTone(null);
+    setAttemptNumber(1);
+  }
 
   function scheduleNextQuestion(currentId?: string, nextProgress?: QuizProgressMap) {
     if (nextTimerRef.current) {
@@ -96,9 +97,7 @@ export function QuizGame() {
       }
 
       setCurrentFace(nextFace);
-      setGuess('');
-      setResultMessage(null);
-      setAttemptNumber(1);
+      resetQuestionVisuals();
       startedAtRef.current = Date.now();
 
       if (activeMode === 'multiple-choice' && activeFaces.length >= 4) {
@@ -151,8 +150,7 @@ export function QuizGame() {
         }
 
         const approvedFaces = payload.faces.filter(
-          (face): face is QuizFace =>
-            Boolean(face.personId) && Boolean(face.personName),
+          (face): face is QuizFace => Boolean(face.personId) && Boolean(face.personName),
         );
 
         setFaces(approvedFaces);
@@ -162,7 +160,7 @@ export function QuizGame() {
           const firstFace = selectNextFace(approvedFaces, savedProgress);
           if (firstFace) {
             setCurrentFace(firstFace);
-            setAttemptNumber(1);
+            resetQuestionVisuals();
             startedAtRef.current = Date.now();
             setChoices(
               approvedFaces.length >= 4
@@ -205,9 +203,11 @@ export function QuizGame() {
 
     if (correct) {
       setSessionCorrect((value) => value + 1);
+      setResultTone('correct');
       setResultMessage(`정답! ${currentFace.personName}`);
     } else {
       setSessionWrong((value) => value + 1);
+      setResultTone('wrong');
       setResultMessage(`오답. 정답은 ${currentFace.personName}`);
     }
 
@@ -234,16 +234,14 @@ export function QuizGame() {
       return;
     }
 
-    const correct = isCorrectAnswer(
-      answer,
-      currentFace.personName,
-      currentFace.aliases,
-    );
+    const correct = isCorrectAnswer(answer, currentFace.personName, currentFace.aliases);
 
     if (correct) {
       await finalizeAnswer(answer, true);
       return;
     }
+
+    setResultTone('wrong');
 
     if (attemptNumber < MAX_TRIES) {
       const remaining = MAX_TRIES - attemptNumber;
@@ -283,6 +281,14 @@ export function QuizGame() {
   }
 
   const initials = getHangulInitials(currentFace.personName);
+  const questionCardClassName = [
+    'card',
+    'stack-sm',
+    'quiz-question-card',
+    resultTone ? `quiz-question-card-${resultTone}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <section className="stack-md">
@@ -291,7 +297,7 @@ export function QuizGame() {
           <img src={currentFace.cropUrl} alt="퀴즈 얼굴" />
         </div>
 
-        <div className="card stack-sm quiz-question-card">
+        <div className={questionCardClassName}>
           <div className="stack-xs quiz-head-block">
             <div className="row gap-sm wrap quiz-mode-tabs">
               <button
@@ -320,9 +326,7 @@ export function QuizGame() {
 
             <div className="stack-xs quiz-title-block">
               <h3>이 사람의 이름은?</h3>
-              {mode === 'initial-hint' ? (
-                <p className="muted-text">힌트: {initials}</p>
-              ) : null}
+              {mode === 'initial-hint' ? <p className="muted-text">힌트: {initials}</p> : null}
             </div>
           </div>
 
@@ -367,16 +371,14 @@ export function QuizGame() {
           <p className="muted-text small-text quiz-tries-text">이번 문제 기회: {triesLeft} / {MAX_TRIES}</p>
 
           {resultMessage ? (
-            <p className={resultMessage.startsWith('정답') ? 'success-text' : 'error-text'}>
-              {resultMessage}
-            </p>
+            <p className={resultTone === 'correct' ? 'success-text' : 'error-text'}>{resultMessage}</p>
           ) : null}
         </div>
       </div>
 
       <div className="card quiz-summary-card stack-xs">
-        <p className="label">정답률</p>
-        <strong>{accuracy}%</strong>
+        <p className="label">정답 수</p>
+        <strong>{sessionCorrect}</strong>
       </div>
     </section>
   );

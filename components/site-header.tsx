@@ -37,7 +37,7 @@ export function SiteHeader() {
     <header className="site-header">
       <div className="container header-inner">
         <Link href="/quiz" className="brand">
-          드리미학교
+          드리미퀴즈
         </Link>
 
         <nav className="desktop-nav" aria-label="주요 메뉴">

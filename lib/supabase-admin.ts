@@ -269,8 +269,10 @@ export async function listPendingFacesForReview(limit = 120): Promise<FaceCard[]
 async function getOrCreatePerson(
   personName: string,
   aliases: string[] = [],
+  aliasMode: 'merge' | 'replace' = 'merge',
 ): Promise<PersonRecord> {
   const cleanName = cleanDisplayName(personName);
+  const parsedAliases = parseAliases(aliases);
 
   if (!cleanName) {
     throw new Error('사람 이름이 비어 있습니다.');
@@ -287,14 +289,18 @@ async function getOrCreatePerson(
   const existing = existingList?.[0];
 
   if (existing) {
-    const mergedAliases = Array.from(
-      new Set([...(existing.aliases ?? []), ...parseAliases(aliases)]),
-    );
+    const nextAliases = aliasMode === 'replace'
+      ? parsedAliases
+      : Array.from(new Set([...(existing.aliases ?? []), ...parsedAliases]));
+    const currentAliases = existing.aliases ?? [];
+    const aliasesChanged =
+      nextAliases.length !== currentAliases.length ||
+      nextAliases.some((alias, index) => alias !== currentAliases[index]);
 
-    if (mergedAliases.length !== (existing.aliases ?? []).length) {
+    if (aliasesChanged) {
       const { error: updateError } = await supabaseAdmin
         .from('people')
-        .update({ aliases: mergedAliases })
+        .update({ aliases: nextAliases })
         .eq('id', existing.id);
 
       ensureNoError(updateError, '사람 alias 업데이트 실패');
@@ -303,7 +309,7 @@ async function getOrCreatePerson(
     return {
       id: existing.id,
       name: existing.name,
-      aliases: mergedAliases,
+      aliases: nextAliases,
       createdAt: existing.created_at,
     };
   }
@@ -312,7 +318,7 @@ async function getOrCreatePerson(
     .from('people')
     .insert({
       name: cleanName,
-      aliases: parseAliases(aliases),
+      aliases: parsedAliases,
     })
     .select('id, name, aliases, created_at')
     .single();
@@ -433,7 +439,7 @@ export async function approveFaceWithName(params: {
   aliases?: string[];
   approvedSubmissionId?: string | null;
 }): Promise<PersonRecord> {
-  const person = await getOrCreatePerson(params.personName, params.aliases ?? []);
+  const person = await getOrCreatePerson(params.personName, params.aliases ?? [], 'merge');
 
   const { error: faceUpdateError } = await supabaseAdmin
     .from('faces')
@@ -470,7 +476,7 @@ export async function updateApprovedFace(params: {
   personName: string;
   aliases?: string[];
 }): Promise<PersonRecord> {
-  const person = await getOrCreatePerson(params.personName, params.aliases ?? []);
+  const person = await getOrCreatePerson(params.personName, params.aliases ?? [], 'replace');
 
   const { error } = await supabaseAdmin
     .from('faces')

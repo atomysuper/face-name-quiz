@@ -125,15 +125,19 @@ export function ReviewBoard() {
         setApprovedFaces((current) => [
           {
             ...approved,
-            personName: form.personName,
-            aliases: parseAliases(form.aliasesText),
+            personName: payload.person?.name ?? form.personName,
+            aliases: payload.person?.aliases ?? parseAliases(form.aliasesText),
             personId: payload.person?.id ?? approved.personId,
             status: 'approved',
           },
           ...current,
         ]);
       }
-      setMessage(`승인 완료: ${form.personName}`);
+      updateFaceForm(faceId, {
+        personName: payload.person?.name ?? form.personName,
+        aliasesText: (payload.person?.aliases ?? parseAliases(form.aliasesText)).join(', '),
+      });
+      setMessage(`승인 완료: ${payload.person?.name ?? form.personName}`);
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
     } finally {
@@ -176,14 +180,18 @@ export function ReviewBoard() {
           face.id === faceId
             ? {
                 ...face,
-                personName: form.personName,
-                aliases: parseAliases(form.aliasesText),
+                personName: payload.person?.name ?? form.personName,
+                aliases: payload.person?.aliases ?? parseAliases(form.aliasesText),
                 personId: payload.person?.id ?? face.personId,
               }
             : face,
         ),
       );
-      setMessage(`수정 완료: ${form.personName}`);
+      updateFaceForm(faceId, {
+        personName: payload.person?.name ?? form.personName,
+        aliasesText: (payload.person?.aliases ?? parseAliases(form.aliasesText)).join(', '),
+      });
+      setMessage(`수정 완료: ${payload.person?.name ?? form.personName}`);
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
     } finally {

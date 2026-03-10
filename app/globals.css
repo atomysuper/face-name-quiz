@@ -68,9 +68,9 @@ input {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   min-height: 68px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .brand {
@@ -146,6 +146,7 @@ input {
 
 .page-shell {
   padding: 40px 0 72px;
+  overflow-x: clip;
 }
 
 .hero {
@@ -512,6 +513,16 @@ input {
   text-align: center;
 }
 
+.quiz-question-card-correct {
+  background: #ecfdf3;
+  border-color: #8fe0b2;
+}
+
+.quiz-question-card-wrong {
+  background: #fff1f3;
+  border-color: #f3a6b3;
+}
+
 .manage-toolbar {
   justify-content: space-between;
 }
@@ -550,7 +561,8 @@ input {
   .header-inner {
     padding: 10px 0;
     min-height: 60px;
-    align-items: flex-start;
+    align-items: center;
+    gap: 8px;
   }
 
   .desktop-nav {
@@ -565,26 +577,32 @@ input {
   .mobile-nav-shell {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    width: 100%;
-    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
   }
 
   .mobile-quick-links {
-    gap: 6px;
+    gap: 4px;
     flex: 1 1 auto;
     min-width: 0;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
   }
 
   .brand {
-    font-size: 1.02rem;
+    font-size: 0.98rem;
+    flex: 0 0 auto;
   }
 
   .menu-toggle,
   .mobile-quiz-link {
-    padding: 9px 12px;
-    font-size: 0.92rem;
+    padding: 7px 9px;
+    font-size: 0.82rem;
+    white-space: nowrap;
   }
 
   .page-shell {
@@ -605,7 +623,7 @@ input {
 
   .quiz-face-card img {
     height: auto;
-    max-height: min(30vh, 230px);
+    max-height: min(28vh, 210px);
   }
 
   .quiz-mode-tabs {
