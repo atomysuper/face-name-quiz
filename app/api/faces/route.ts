@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import { rejectUnlessSiteAccess } from '@/lib/site-auth';
 import { listFaces } from '@/lib/supabase-admin';
 import type { FaceStatus } from '@/lib/types';
 import { clamp, toErrorMessage } from '@/lib/utils';
@@ -7,6 +8,11 @@ import { clamp, toErrorMessage } from '@/lib/utils';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+  const siteUnauthorizedResponse = await rejectUnlessSiteAccess();
+  if (siteUnauthorizedResponse) {
+    return siteUnauthorizedResponse;
+  }
+
   try {
     const url = new URL(request.url);
     const rawStatus = url.searchParams.get('status');

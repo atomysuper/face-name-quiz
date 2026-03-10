@@ -1,6 +1,9 @@
 import { ContributeBoard } from '@/components/contribute-board';
+import { requireSitePage } from '@/lib/site-auth';
 
-export default function ContributePage() {
+export default async function ContributePage() {
+  await requireSitePage();
+
   return (
     <section className="stack-lg">
       <div className="stack-xs">

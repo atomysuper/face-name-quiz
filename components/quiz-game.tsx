@@ -6,6 +6,7 @@ import {
   applyAttempt,
   buildMultipleChoiceOptions,
   selectNextFace,
+  type MultipleChoiceOption,
   type QuizProgressMap,
 } from '@/lib/quiz-algorithm';
 import type { FaceCard, QuizFace } from '@/lib/types';
@@ -45,12 +46,16 @@ function saveProgress(progress: QuizProgressMap) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
 }
 
+function formatChoiceMeta(aliases: string[]): string {
+  return aliases.filter(Boolean).join(' / ');
+}
+
 export function QuizGame() {
   const [faces, setFaces] = useState<QuizFace[]>([]);
   const [progress, setProgress] = useState<QuizProgressMap>({});
   const [currentFace, setCurrentFace] = useState<QuizFace | null>(null);
   const [mode, setMode] = useState<QuizMode>('multiple-choice');
-  const [choices, setChoices] = useState<string[]>([]);
+  const [choices, setChoices] = useState<MultipleChoiceOption[]>([]);
   const [guess, setGuess] = useState('');
   const [sessionCorrect, setSessionCorrect] = useState(0);
   const [sessionWrong, setSessionWrong] = useState(0);
@@ -280,14 +285,14 @@ export function QuizGame() {
   const initials = getHangulInitials(currentFace.personName);
 
   return (
-    <section className="stack-lg">
+    <section className="stack-md">
       <div className="quiz-shell quiz-shell-top">
         <div className="card quiz-face-card">
           <img src={currentFace.cropUrl} alt="퀴즈 얼굴" />
         </div>
 
-        <div className="card stack-md quiz-question-card">
-          <div className="stack-sm quiz-head-block">
+        <div className="card stack-sm quiz-question-card">
+          <div className="stack-xs quiz-head-block">
             <div className="row gap-sm wrap quiz-mode-tabs">
               <button
                 className={`button ${mode === 'multiple-choice' ? 'primary' : 'ghost'}`}
@@ -323,16 +328,25 @@ export function QuizGame() {
 
           {mode === 'multiple-choice' && readyForMultipleChoice ? (
             <div className="choice-grid compact-choice-grid">
-              {choices.map((choice) => (
-                <button
-                  key={`${currentFace.id}-${choice}`}
-                  className="button choice compact-choice"
-                  type="button"
-                  onClick={() => void handleAnswer(choice)}
-                >
-                  {choice}
-                </button>
-              ))}
+              {choices.map((choice) => {
+                const metaText = formatChoiceMeta(choice.aliases);
+
+                return (
+                  <button
+                    key={`${currentFace.id}-${choice.faceId}`}
+                    className="button choice compact-choice"
+                    type="button"
+                    onClick={() => void handleAnswer(choice.personName)}
+                  >
+                    <span className="choice-label">
+                      <span className="choice-title-inline">
+                        <span className="choice-name">{choice.personName}</span>
+                        {metaText ? <span className="choice-meta-inline">{metaText}</span> : null}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <form className="stack-sm quiz-answer-form" onSubmit={handleSubmit}>
@@ -360,23 +374,9 @@ export function QuizGame() {
         </div>
       </div>
 
-      <div className="stats-grid">
-        <div className="card stack-xs">
-          <p className="label">이번 세션 정답</p>
-          <strong>{sessionCorrect}</strong>
-        </div>
-        <div className="card stack-xs">
-          <p className="label">이번 세션 오답</p>
-          <strong>{sessionWrong}</strong>
-        </div>
-        <div className="card stack-xs">
-          <p className="label">정답률</p>
-          <strong>{accuracy}%</strong>
-        </div>
-        <div className="card stack-xs">
-          <p className="label">등록된 얼굴</p>
-          <strong>{faces.length}</strong>
-        </div>
+      <div className="card quiz-summary-card stack-xs">
+        <p className="label">정답률</p>
+        <strong>{accuracy}%</strong>
       </div>
     </section>
   );

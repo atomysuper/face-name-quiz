@@ -2,8 +2,11 @@ import { redirect } from 'next/navigation';
 
 import { AdminLoginForm } from '@/components/admin-login-form';
 import { isAdminSessionActive } from '@/lib/admin-auth';
+import { requireSitePage } from '@/lib/site-auth';
 
 export default async function AdminLoginPage() {
+  await requireSitePage();
+
   if (await isAdminSessionActive()) {
     redirect('/admin/upload');
   }

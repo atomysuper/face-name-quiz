@@ -499,7 +499,7 @@ export function ReviewBoard() {
                           disabled={savingFaceId === face.id}
                           onClick={() => void handleUpdateApproved(face.id)}
                         >
-                          {savingFaceId === face.id ? '수정 중...' : '이름 수정 저장'}
+                          {savingFaceId === face.id ? '수정 중...' : '저장'}
                         </button>
                         <button
                           className="button ghost"
@@ -507,7 +507,7 @@ export function ReviewBoard() {
                           disabled={savingFaceId === face.id}
                           onClick={() => void handleReopen(face.id)}
                         >
-                          다시 검토로 보내기
+                          검토대기로
                         </button>
                         <button
                           className="button danger"

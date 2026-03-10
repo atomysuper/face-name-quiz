@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 
 import { rejectUnlessAdmin } from '@/lib/admin-auth';
+import { rejectUnlessSiteAccess } from '@/lib/site-auth';
 import { createPhotoAndFaces } from '@/lib/supabase-admin';
 import type { ImportFacePayload } from '@/lib/types';
 import { cleanDisplayName, toErrorMessage } from '@/lib/utils';
 
 export async function POST(request: Request) {
+  const siteUnauthorizedResponse = await rejectUnlessSiteAccess();
+  if (siteUnauthorizedResponse) {
+    return siteUnauthorizedResponse;
+  }
+
   const unauthorizedResponse = await rejectUnlessAdmin();
   if (unauthorizedResponse) {
     return unauthorizedResponse;

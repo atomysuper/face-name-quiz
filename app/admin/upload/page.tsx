@@ -3,8 +3,10 @@ import Link from 'next/link';
 import { AdminLogoutButton } from '@/components/admin-logout-button';
 import { PhotoImporter } from '@/components/photo-importer';
 import { requireAdminPage } from '@/lib/admin-auth';
+import { requireSitePage } from '@/lib/site-auth';
 
 export default async function AdminUploadPage() {
+  await requireSitePage();
   await requireAdminPage();
 
   return (

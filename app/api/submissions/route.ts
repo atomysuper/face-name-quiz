@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 
+import { rejectUnlessSiteAccess } from '@/lib/site-auth';
 import { createNameSubmission } from '@/lib/supabase-admin';
 import { toErrorMessage } from '@/lib/utils';
 
 export async function POST(request: Request) {
+  const siteUnauthorizedResponse = await rejectUnlessSiteAccess();
+  if (siteUnauthorizedResponse) {
+    return siteUnauthorizedResponse;
+  }
+
   try {
     const body = (await request.json()) as {
       faceId?: string;

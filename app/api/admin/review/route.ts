@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { rejectUnlessAdmin } from '@/lib/admin-auth';
+import { rejectUnlessSiteAccess } from '@/lib/site-auth';
 import {
   approveFaceWithName,
   deleteFace,
@@ -38,6 +39,11 @@ type ReviewRequest =
     };
 
 export async function POST(request: Request) {
+  const siteUnauthorizedResponse = await rejectUnlessSiteAccess();
+  if (siteUnauthorizedResponse) {
+    return siteUnauthorizedResponse;
+  }
+
   const unauthorizedResponse = await rejectUnlessAdmin();
   if (unauthorizedResponse) {
     return unauthorizedResponse;

@@ -2,14 +2,26 @@ type ServerEnv = {
   supabaseUrl: string;
   supabaseServiceKey: string;
   adminPasscode: string;
+  sitePasscode: string;
   sessionSecret: string;
 };
+
+export function getConfiguredSitePasscode(): string {
+  const sitePasscode = process.env.SITE_PASSCODE ?? process.env.ADMIN_PASSCODE;
+
+  if (!sitePasscode) {
+    throw new Error('SITE_PASSCODE 또는 ADMIN_PASSCODE 환경변수가 없습니다.');
+  }
+
+  return sitePasscode;
+}
 
 export function getServerEnv(): ServerEnv {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey =
     process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
   const adminPasscode = process.env.ADMIN_PASSCODE;
+  const sitePasscode = getConfiguredSitePasscode();
   const sessionSecret = process.env.SESSION_SECRET;
 
   if (!supabaseUrl) {
@@ -34,6 +46,7 @@ export function getServerEnv(): ServerEnv {
     supabaseUrl,
     supabaseServiceKey,
     adminPasscode,
+    sitePasscode,
     sessionSecret,
   };
 }

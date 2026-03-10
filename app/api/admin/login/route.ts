@@ -5,8 +5,14 @@ import {
   getAdminSessionToken,
   isValidAdminPasscode,
 } from '@/lib/admin-auth';
+import { rejectUnlessSiteAccess } from '@/lib/site-auth';
 
 export async function POST(request: Request) {
+  const siteUnauthorizedResponse = await rejectUnlessSiteAccess();
+  if (siteUnauthorizedResponse) {
+    return siteUnauthorizedResponse;
+  }
+
   try {
     const body = (await request.json()) as { passcode?: string };
     const passcode = body.passcode?.trim() ?? '';

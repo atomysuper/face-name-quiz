@@ -13,6 +13,12 @@ export type QuizProgressEntry = {
 
 export type QuizProgressMap = Record<string, QuizProgressEntry>;
 
+export type MultipleChoiceOption = {
+  faceId: string;
+  personName: string;
+  aliases: string[];
+};
+
 const DEFAULT_PROGRESS: QuizProgressEntry = {
   seen: 0,
   correct: 0,
@@ -121,14 +127,24 @@ export function buildMultipleChoiceOptions(
   faces: QuizFace[],
   correctFace: QuizFace,
   count = 4,
-): string[] {
-  const distractors = shuffle(
-    faces
-      .filter((face) => face.id !== correctFace.id)
-      .map((face) => face.personName),
-  )
-    .filter((name, index, array) => array.indexOf(name) === index)
-    .slice(0, Math.max(0, count - 1));
+): MultipleChoiceOption[] {
+  const distractors = shuffle(faces.filter((face) => face.id !== correctFace.id)).reduce<QuizFace[]>(
+    (result, face) => {
+      if (result.some((item) => item.personName === face.personName)) {
+        return result;
+      }
 
-  return shuffle([correctFace.personName, ...distractors]).slice(0, count);
+      result.push(face);
+      return result;
+    },
+    [],
+  ).slice(0, Math.max(0, count - 1));
+
+  return shuffle([correctFace, ...distractors])
+    .slice(0, count)
+    .map((face) => ({
+      faceId: face.id,
+      personName: face.personName,
+      aliases: face.aliases,
+    }));
 }
