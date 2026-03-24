@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Analytics } from '@vercel/analytics/next';
 
 import { SiteHeader } from '@/components/site-header';
 
@@ -19,6 +20,7 @@ export default function RootLayout({
       <body>
         <SiteHeader />
         <main className="container page-shell">{children}</main>
+        <Analytics />
       </body>
     </html>
   );
