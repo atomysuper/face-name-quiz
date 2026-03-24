@@ -21,9 +21,7 @@ export function SiteEntryForm() {
       const nextPath = searchParams.get('next') ?? '/quiz';
       const response = await fetch('/api/site-auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ passcode, nextPath }),
       });
 
@@ -43,9 +41,9 @@ export function SiteEntryForm() {
   }
 
   return (
-    <form className="stack-md card" onSubmit={handleSubmit}>
+    <form className="stack-md" onSubmit={handleSubmit}>
       <div className="stack-xs">
-        <label className="label" htmlFor="site-passcode">
+        <label className="label" htmlFor="site-passcode" style={{ marginBottom: 4 }}>
           입장 비밀번호
         </label>
         <input
@@ -53,16 +51,24 @@ export function SiteEntryForm() {
           className="input"
           type="password"
           value={passcode}
-          onChange={(event) => setPasscode(event.target.value)}
+          onChange={(e) => setPasscode(e.target.value)}
           placeholder="비밀번호를 입력하세요"
           autoComplete="current-password"
+          autoFocus
           required
         />
       </div>
 
-      {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
+      {errorMessage && (
+        <p className="error-text" style={{ fontSize: '0.88rem' }}>{errorMessage}</p>
+      )}
 
-      <button className="button primary" type="submit" disabled={loading}>
+      <button
+        className="button primary"
+        type="submit"
+        disabled={loading}
+        style={{ width: '100%', padding: '13px', fontSize: '0.95rem' }}
+      >
         {loading ? '확인 중...' : '입장하기'}
       </button>
     </form>

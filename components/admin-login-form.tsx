@@ -19,9 +19,7 @@ export function AdminLoginForm() {
     try {
       const response = await fetch('/api/admin/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ passcode }),
       });
 
@@ -41,7 +39,7 @@ export function AdminLoginForm() {
   }
 
   return (
-    <form className="stack-md card" onSubmit={handleSubmit}>
+    <form className="stack-md card" onSubmit={handleSubmit} style={{ maxWidth: 400 }}>
       <div className="stack-xs">
         <label className="label" htmlFor="admin-passcode">
           관리자 비밀번호
@@ -51,17 +49,20 @@ export function AdminLoginForm() {
           className="input"
           type="password"
           value={passcode}
-          onChange={(event) => setPasscode(event.target.value)}
+          onChange={(e) => setPasscode(e.target.value)}
           placeholder="비밀번호를 입력하세요"
           autoComplete="current-password"
+          autoFocus
           required
         />
       </div>
 
-      {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
+      {errorMessage && (
+        <p className="error-text" style={{ fontSize: '0.88rem' }}>{errorMessage}</p>
+      )}
 
-      <button className="button primary" type="submit" disabled={loading}>
-        {loading ? '로그인 중...' : '로그인'}
+      <button className="button primary" type="submit" disabled={loading} style={{ width: '100%' }}>
+        {loading ? '로그인 중...' : '관리자 로그인'}
       </button>
     </form>
   );

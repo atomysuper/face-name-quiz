@@ -37,12 +37,17 @@ export function SiteHeader() {
     <header className="site-header">
       <div className="container header-inner">
         <Link href="/quiz" className="brand">
+          <span className="brand-dot" />
           드리미퀴즈
         </Link>
 
         <nav className="desktop-nav" aria-label="주요 메뉴">
           {desktopMenuItems.map((item) => (
-            <Link key={item.href} href={item.href} className={pathname === item.href ? 'nav-active' : undefined}>
+            <Link
+              key={item.href}
+              href={item.href}
+              className={pathname === item.href ? 'nav-active' : undefined}
+            >
               {item.label}
             </Link>
           ))}
@@ -51,7 +56,11 @@ export function SiteHeader() {
         <div className="mobile-nav-shell">
           <div className="mobile-quick-links">
             {mobileQuickLinks.map((item) => (
-              <Link key={item.href} href={item.href} className={`mobile-quiz-link ${pathname === item.href ? 'nav-active' : ''}`}>
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`mobile-quiz-link ${pathname === item.href ? 'nav-active' : ''}`}
+              >
                 {item.label}
               </Link>
             ))}
@@ -62,24 +71,28 @@ export function SiteHeader() {
             className="menu-toggle"
             aria-expanded={menuOpen}
             aria-controls="mobile-menu"
-            onClick={() => setMenuOpen((value) => !value)}
+            onClick={() => setMenuOpen((v) => !v)}
           >
-            메뉴
+            {menuOpen ? '닫기' : '메뉴'}
           </button>
         </div>
       </div>
 
-      {menuOpen ? (
-        <div className="mobile-menu-wrap">
+      {menuOpen && (
+        <div className="mobile-menu-wrap animate-fade-in">
           <nav id="mobile-menu" className="container mobile-menu" aria-label="모바일 메뉴">
             {mobileMenuItems.map((item) => (
-              <Link key={item.href} href={item.href} className={pathname === item.href ? 'nav-active' : undefined}>
+              <Link
+                key={item.href}
+                href={item.href}
+                className={pathname === item.href ? 'nav-active' : undefined}
+              >
                 {item.label}
               </Link>
             ))}
           </nav>
         </div>
-      ) : null}
+      )}
     </header>
   );
 }
