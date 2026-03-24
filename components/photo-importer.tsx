@@ -50,6 +50,13 @@ export function PhotoImporter() {
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [adjustingCropId, setAdjustingCropId] = useState<string | null>(null);
+  const [adjustBox, setAdjustBox] = useState<BoundingBox | null>(null);
+  const [resizeDrag, setResizeDrag] = useState<{
+    handle: string;
+    startClientX: number;
+    startClientY: number;
+    startBox: BoundingBox;
+  } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -97,19 +104,89 @@ export function PhotoImporter() {
     setDragState(null);
     setImageSize(null);
     setAdjustingCropId(null);
+    setAdjustBox(null);
+    setResizeDrag(null);
   }
 
   function handleStartAdjust(cropId: string) {
+    const crop = crops.find((c) => c.id === cropId);
+    if (!crop) return;
     setAdjustingCropId(cropId);
-    setManualMode(true);
-    setMessage('위치를 조정할 새 박스를 사진 위에 드래그해서 그려주세요.');
+    setAdjustBox({ ...crop.bbox });
+    setResizeDrag(null);
+    setManualMode(false);
+    setMessage('모서리·가장자리를 드래그해서 범위를 조정하세요. 상자 안을 드래그하면 이동합니다.');
     photoStageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   function handleCancelAdjust() {
     setAdjustingCropId(null);
+    setAdjustBox(null);
+    setResizeDrag(null);
     setManualMode(false);
     setMessage(null);
+  }
+
+  async function handleApplyAdjust() {
+    if (!adjustBox || !adjustingCropId || !selectedFile) return;
+    const targetId = adjustingCropId;
+    const newBox = { ...adjustBox };
+    setAdjustingCropId(null);
+    setAdjustBox(null);
+    setResizeDrag(null);
+    try {
+      const newCrop = await createManualCrop(selectedFile, newBox);
+      setCrops((current) => {
+        const target = current.find((c) => c.id === targetId);
+        if (target) URL.revokeObjectURL(target.previewUrl);
+        return current.map((c) => (c.id === targetId ? { ...newCrop, source: c.source } : c));
+      });
+      setMessage('위치 조정이 완료되었습니다.');
+    } catch (error) {
+      setErrorMessage(toErrorMessage(error));
+    }
+  }
+
+  function handleResizeHandleDown(handle: string, e: React.PointerEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setResizeDrag({
+      handle,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startBox: { ...adjustBox! },
+    });
+  }
+
+  function handleResizeHandleMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!resizeDrag || !imageSize || !imageRef.current) return;
+    e.preventDefault();
+    const rect = imageRef.current.getBoundingClientRect();
+    const scaleX = imageSize.width / rect.width;
+    const scaleY = imageSize.height / rect.height;
+    const dx = (e.clientX - resizeDrag.startClientX) * scaleX;
+    const dy = (e.clientY - resizeDrag.startClientY) * scaleY;
+    const b = resizeDrag.startBox;
+    const h = resizeDrag.handle;
+    let newX = b.x, newY = b.y, newW = b.w, newH = b.h;
+    if (h === 'move')                           { newX = b.x + dx; newY = b.y + dy; }
+    if (h === 'nw' || h === 'w' || h === 'sw') { newX = b.x + dx; newW = b.w - dx; }
+    if (h === 'ne' || h === 'e' || h === 'se') { newW = b.w + dx; }
+    if (h === 'nw' || h === 'n' || h === 'ne') { newY = b.y + dy; newH = b.h - dy; }
+    if (h === 'sw' || h === 's' || h === 'se') { newH = b.h + dy; }
+    const MIN = 40;
+    if (newW < MIN) { if (h.includes('w')) newX = b.x + b.w - MIN; newW = MIN; }
+    if (newH < MIN) { if (h.includes('n')) newY = b.y + b.h - MIN; newH = MIN; }
+    newX = Math.max(0, Math.min(imageSize.width - newW, newX));
+    newY = Math.max(0, Math.min(imageSize.height - newH, newY));
+    newW = Math.min(imageSize.width - newX, newW);
+    newH = Math.min(imageSize.height - newY, newH);
+    setAdjustBox({ x: newX, y: newY, w: newW, h: newH });
+  }
+
+  function handleResizeHandleUp(e: React.PointerEvent<HTMLDivElement>) {
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    setResizeDrag(null);
   }
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -181,6 +258,7 @@ export function PhotoImporter() {
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (adjustBox) return; // 리사이즈 모드 중에는 새 박스 그리기 비활성
     if (!manualMode || !imageSize) {
       return;
     }
@@ -251,28 +329,11 @@ export function PhotoImporter() {
 
     try {
       const manualCrop = await createManualCrop(selectedFile, nextBox);
-
-      if (adjustingCropId) {
-        // 위치 조정 모드: 지정된 크롭만 교체
-        const targetId = adjustingCropId;
-        setAdjustingCropId(null);
-        setManualMode(false);
-        setCrops((current) => {
-          const target = current.find((c) => c.id === targetId);
-          if (target) {
-            URL.revokeObjectURL(target.previewUrl);
-          }
-          return current.map((c) => (c.id === targetId ? manualCrop : c));
-        });
-        setMessage('위치 조정이 완료되었습니다.');
-      } else {
-        // 일반 수동 추가 모드: 겹치는 박스를 교체
-        setCrops((current) => {
-          const filtered = current.filter((crop) => !overlaps(crop.bbox, nextBox));
-          return [...filtered, manualCrop];
-        });
-        setMessage('수동 박스를 추가했습니다. 겹치는 자동 박스는 새 박스로 교체했습니다.');
-      }
+      setCrops((current) => {
+        const filtered = current.filter((crop) => !overlaps(crop.bbox, nextBox));
+        return [...filtered, manualCrop];
+      });
+      setMessage('수동 박스를 추가했습니다. 겹치는 자동 박스는 새 박스로 교체했습니다.');
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
     }
@@ -472,18 +533,23 @@ export function PhotoImporter() {
             </p>
           </div>
 
-          {adjustingCropId ? (
+          {adjustingCropId && adjustBox ? (
             <div className="adjust-banner">
-              #{activeCrops.findIndex((c) => c.id === adjustingCropId) + 1}번 얼굴 위치 조정 중 — 사진 위에 새 박스를 드래그해서 그려주세요.
-              <button className="button ghost" type="button" style={{ marginLeft: 12, padding: '2px 12px', fontSize: 13 }} onClick={handleCancelAdjust}>
-                취소
-              </button>
+              <span>#{activeCrops.findIndex((c) => c.id === adjustingCropId) + 1}번 얼굴 — 모서리·가장자리 드래그로 범위 조정, 상자 안 드래그로 이동</span>
+              <div className="row gap-sm" style={{ marginLeft: 'auto' }}>
+                <button className="button primary" type="button" style={{ padding: '3px 14px', fontSize: 13 }} onClick={() => void handleApplyAdjust()}>
+                  적용
+                </button>
+                <button className="button ghost" type="button" style={{ padding: '3px 12px', fontSize: 13 }} onClick={handleCancelAdjust}>
+                  취소
+                </button>
+              </div>
             </div>
           ) : null}
 
           <div className="photo-stage-wrap">
             <div
-              className={`photo-stage ${manualMode ? 'manual-on' : ''}`}
+              className={`photo-stage ${adjustBox ? '' : manualMode ? 'manual-on' : ''}`}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
@@ -503,17 +569,74 @@ export function PhotoImporter() {
               />
               <div className="photo-overlay">
                 {activeCrops.map((crop) =>
+                  // 리사이즈 모드 중인 박스는 아래 별도 UI로 렌더하므로 여기서 건너뜀
+                  crop.id === adjustingCropId && adjustBox ? null :
                   renderOverlayBox(
                     crop.bbox,
                     crop.id,
-                    crop.id === adjustingCropId
-                      ? 'adjusting'
-                      : crop.source === 'manual'
-                      ? 'manual'
-                      : 'auto',
+                    crop.source === 'manual' ? 'manual' : 'auto',
                   ),
                 )}
                 {draftBox ? renderOverlayBox(draftBox, 'draft', 'draft') : null}
+
+                {/* ── 리사이즈 UI ─────────────────────────────── */}
+                {adjustBox && imageSize ? (() => {
+                  const bx = (v: number) => `${(v / imageSize.width) * 100}%`;
+                  const by = (v: number) => `${(v / imageSize.height) * 100}%`;
+                  const HANDLES = [
+                    { k: 'nw', l: adjustBox.x,                    t: adjustBox.y,                    cur: 'nw-resize' },
+                    { k: 'n',  l: adjustBox.x + adjustBox.w / 2,  t: adjustBox.y,                    cur: 'n-resize'  },
+                    { k: 'ne', l: adjustBox.x + adjustBox.w,      t: adjustBox.y,                    cur: 'ne-resize' },
+                    { k: 'e',  l: adjustBox.x + adjustBox.w,      t: adjustBox.y + adjustBox.h / 2,  cur: 'e-resize'  },
+                    { k: 'se', l: adjustBox.x + adjustBox.w,      t: adjustBox.y + adjustBox.h,      cur: 'se-resize' },
+                    { k: 's',  l: adjustBox.x + adjustBox.w / 2,  t: adjustBox.y + adjustBox.h,      cur: 's-resize'  },
+                    { k: 'sw', l: adjustBox.x,                    t: adjustBox.y + adjustBox.h,      cur: 'sw-resize' },
+                    { k: 'w',  l: adjustBox.x,                    t: adjustBox.y + adjustBox.h / 2,  cur: 'w-resize'  },
+                  ];
+                  return (
+                    <>
+                      {/* 박스 몸체 — 안쪽 드래그 시 이동 */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: bx(adjustBox.x), top: by(adjustBox.y),
+                          width: bx(adjustBox.w), height: by(adjustBox.h),
+                          border: '2.5px solid #F59E0B',
+                          background: 'rgba(245,158,11,0.08)',
+                          cursor: 'move',
+                          pointerEvents: 'auto',
+                          touchAction: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                        onPointerDown={(e) => handleResizeHandleDown('move', e)}
+                        onPointerMove={handleResizeHandleMove}
+                        onPointerUp={handleResizeHandleUp}
+                      />
+                      {/* 8방향 핸들 */}
+                      {HANDLES.map((h) => (
+                        <div
+                          key={h.k}
+                          style={{
+                            position: 'absolute',
+                            left: `calc(${bx(h.l)} - 6px)`,
+                            top: `calc(${by(h.t)} - 6px)`,
+                            width: 13, height: 13,
+                            background: 'white',
+                            border: '2.5px solid #F59E0B',
+                            borderRadius: 3,
+                            cursor: h.cur,
+                            pointerEvents: 'auto',
+                            touchAction: 'none',
+                            zIndex: 10,
+                          }}
+                          onPointerDown={(e) => handleResizeHandleDown(h.k, e)}
+                          onPointerMove={handleResizeHandleMove}
+                          onPointerUp={handleResizeHandleUp}
+                        />
+                      ))}
+                    </>
+                  );
+                })() : null}
               </div>
             </div>
           </div>

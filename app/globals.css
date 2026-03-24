@@ -820,6 +820,8 @@ p { margin: 0; }
 .adjust-banner {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   background: #FFF8E8;
   border: 1.5px solid #F59E0B;
   border-radius: var(--radius-sm);
@@ -827,7 +829,6 @@ p { margin: 0; }
   font-size: 14px;
   font-weight: 500;
   color: #92400E;
-  gap: 4px;
 }
 
 .face-card-adjusting {
