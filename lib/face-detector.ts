@@ -58,11 +58,13 @@ function clampBox(box: BoundingBox, imageWidth: number, imageHeight: number): Bo
 }
 
 function expandBoundingBox(box: BoundingBox, imageWidth: number, imageHeight: number): BoundingBox {
-  // MediaPipe는 눈·코·입 영역만 반환하므로 머리 위를 충분히 더 포함해야 합니다
-  const padLeft   = Math.max(box.w * 0.28, 20);
-  const padRight  = Math.max(box.w * 0.28, 20);
-  const padTop    = Math.max(box.h * 0.75, 30); // 헤어라인 위까지 포함
-  const padBottom = Math.max(box.h * 0.38, 22); // 턱 아래 목 부분까지 포함
+  // MediaPipe 감지 박스는 대략 눈썹~턱 사이만 포함합니다.
+  // 머리 꼭대기까지 올리려면 박스 높이 110% 이상 위로 올려야 하고,
+  // 어깨까지 내리려면 아래로 박스 높이만큼 추가로 내려야 합니다.
+  const padLeft   = Math.max(box.w * 0.38, 24);
+  const padRight  = Math.max(box.w * 0.38, 24);
+  const padTop    = Math.max(box.h * 1.1,  36); // 머리 꼭대기 + 여유
+  const padBottom = Math.max(box.h * 0.95, 30); // 목 아래 어깨까지
 
   return clampBox(
     {
