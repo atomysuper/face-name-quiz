@@ -129,21 +129,17 @@ function extractBoxesFromCanvas(
 ): BoundingBox[] {
   const result = detector.detect(canvas);
 
+  // 여기서는 패딩 없이 원시 좌표만 반환합니다.
+  // expandBoundingBox는 전체 이미지 크기를 알 수 있는 detectBoxes 에서 적용합니다.
   return (result.detections ?? [])
     .map((detection) => detection.boundingBox)
     .filter(Boolean)
-    .map((box) =>
-      expandBoundingBox(
-        {
-          x: (box!.originX / canvas.width) * sourceWidth + offsetX,
-          y: (box!.originY / canvas.height) * sourceHeight + offsetY,
-          w: (box!.width / canvas.width) * sourceWidth,
-          h: (box!.height / canvas.height) * sourceHeight,
-        },
-        sourceWidth + offsetX,
-        sourceHeight + offsetY,
-      ),
-    );
+    .map((box) => ({
+      x: (box!.originX / canvas.width) * sourceWidth + offsetX,
+      y: (box!.originY / canvas.height) * sourceHeight + offsetY,
+      w: (box!.width / canvas.width) * sourceWidth,
+      h: (box!.height / canvas.height) * sourceHeight,
+    }));
 }
 
 function cropFromBox(image: HTMLImageElement, box: BoundingBox) {
@@ -246,8 +242,19 @@ function detectBoxes(detector: FaceDetector, image: HTMLImageElement): BoundingB
     }
   }
 
-  return dedupeBoxes(
-    allBoxes.map((box) => clampBox(box, image.naturalWidth, image.naturalHeight)),
+  // 전체 이미지 기준으로 클램프 후 중복 제거 (원시 박스 기준으로 dedupe가 더 정확)
+  const rawClamped = allBoxes.map((box) =>
+    clampBox(box, image.naturalWidth, image.naturalHeight),
+  );
+  const deduped = dedupeBoxes(rawClamped);
+
+  // 중복 제거 후 전체 이미지 크기를 알고 expandBoundingBox 적용
+  return deduped.map((box) =>
+    clampBox(
+      expandBoundingBox(box, image.naturalWidth, image.naturalHeight),
+      image.naturalWidth,
+      image.naturalHeight,
+    ),
   );
 }
 
