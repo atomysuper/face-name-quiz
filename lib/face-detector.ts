@@ -127,7 +127,16 @@ function extractBoxesFromCanvas(
   sourceWidth: number,
   sourceHeight: number,
 ): BoundingBox[] {
-  const result = detector.detect(canvas);
+  // MediaPipe/TFLite가 "INFO: ..." 메시지를 console.error로 출력합니다.
+  // Next.js 개발 오버레이가 이를 에러로 잡아 표시하므로, 감지 중에만 잠시 억제합니다.
+  const originalConsoleError = console.error;
+  console.error = () => {};
+  let result;
+  try {
+    result = detector.detect(canvas);
+  } finally {
+    console.error = originalConsoleError;
+  }
 
   // 여기서는 패딩 없이 원시 좌표만 반환합니다.
   // expandBoundingBox는 전체 이미지 크기를 알 수 있는 detectBoxes 에서 적용합니다.
