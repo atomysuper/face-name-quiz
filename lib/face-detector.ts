@@ -58,15 +58,18 @@ function clampBox(box: BoundingBox, imageWidth: number, imageHeight: number): Bo
 }
 
 function expandBoundingBox(box: BoundingBox, imageWidth: number, imageHeight: number): BoundingBox {
-  const padX = Math.max(box.w * 0.22, 18);
-  const padY = Math.max(box.h * 0.34, 22);
+  // MediaPipe는 눈·코·입 영역만 반환하므로 머리 위를 충분히 더 포함해야 합니다
+  const padLeft   = Math.max(box.w * 0.28, 20);
+  const padRight  = Math.max(box.w * 0.28, 20);
+  const padTop    = Math.max(box.h * 0.75, 30); // 헤어라인 위까지 포함
+  const padBottom = Math.max(box.h * 0.38, 22); // 턱 아래 목 부분까지 포함
 
   return clampBox(
     {
-      x: box.x - padX,
-      y: box.y - padY,
-      w: box.w + padX * 2,
-      h: box.h + padY * 2,
+      x: box.x - padLeft,
+      y: box.y - padTop,
+      w: box.w + padLeft + padRight,
+      h: box.h + padTop + padBottom,
     },
     imageWidth,
     imageHeight,
