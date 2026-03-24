@@ -8,10 +8,16 @@ import type { BoundingBox, DetectedCrop } from '@/lib/types';
 
 let detectorPromise: Promise<FaceDetector> | null = null;
 
+// 타일을 이 해상도로 렌더해서 작은 얼굴도 크게 보이게 합니다
+const TILE_RENDER_SIZE = 640;
+
+// 촘촘한 타일 설정으로 단체사진의 작은 얼굴도 놓치지 않습니다
+// 6×6 설정이 30명 이상 단체사진에서 핵심 역할을 합니다
 const TILE_CONFIGS = [
   { columns: 1, rows: 1, overlap: 0 },
-  { columns: 2, rows: 2, overlap: 0.18 },
-  { columns: 3, rows: 2, overlap: 0.2 },
+  { columns: 2, rows: 2, overlap: 0.15 },
+  { columns: 3, rows: 3, overlap: 0.18 },
+  { columns: 6, rows: 6, overlap: 0.1 },
 ] as const;
 
 async function fileToImage(file: File): Promise<HTMLImageElement> {
@@ -160,8 +166,8 @@ async function getDetector(): Promise<FaceDetector> {
           modelAssetPath: modelPath,
         },
         runningMode: 'IMAGE',
-        minDetectionConfidence: 0.35,
-        minSuppressionThreshold: 0.2,
+        minDetectionConfidence: 0.2,
+        minSuppressionThreshold: 0.15,
       });
     })();
   }
@@ -197,9 +203,10 @@ function detectBoxes(detector: FaceDetector, image: HTMLImageElement): BoundingB
           continue;
         }
 
-        workingCanvas.width = Math.max(1, Math.round(tileWidth));
-        workingCanvas.height = Math.max(1, Math.round(tileHeight));
-        workingContext.clearRect(0, 0, workingCanvas.width, workingCanvas.height);
+        // 고정 해상도로 렌더하면 작은 얼굴도 모델 입력에서 크게 보입니다
+        workingCanvas.width = TILE_RENDER_SIZE;
+        workingCanvas.height = TILE_RENDER_SIZE;
+        workingContext.clearRect(0, 0, TILE_RENDER_SIZE, TILE_RENDER_SIZE);
         workingContext.drawImage(
           image,
           sourceX,
@@ -208,8 +215,8 @@ function detectBoxes(detector: FaceDetector, image: HTMLImageElement): BoundingB
           tileHeight,
           0,
           0,
-          workingCanvas.width,
-          workingCanvas.height,
+          TILE_RENDER_SIZE,
+          TILE_RENDER_SIZE,
         );
 
         allBoxes.push(
