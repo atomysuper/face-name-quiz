@@ -58,10 +58,11 @@ function clampBox(box: BoundingBox, imageWidth: number, imageHeight: number): Bo
 }
 
 function expandBoundingBox(box: BoundingBox, imageWidth: number, imageHeight: number): BoundingBox {
-  const padLeft   = Math.max(box.w * 0.60, 30);
-  const padRight  = Math.max(box.w * 0.60, 30);
-  const padTop    = 0;
-  const padBottom = 0;
+  // keypoints tight 박스 엣지에서 상하좌우 60% 패딩
+  const padLeft   = Math.max(box.w * 0.60, 20);
+  const padRight  = Math.max(box.w * 0.60, 20);
+  const padTop    = Math.max(box.h * 0.60, 20);
+  const padBottom = Math.max(box.h * 0.60, 20);
 
   return clampBox(
     {
@@ -138,14 +139,33 @@ function extractBoxesFromCanvas(
   // 여기서는 패딩 없이 원시 좌표만 반환합니다.
   // expandBoundingBox는 전체 이미지 크기를 알 수 있는 detectBoxes 에서 적용합니다.
   return (result.detections ?? [])
-    .map((detection) => detection.boundingBox)
-    .filter(Boolean)
-    .map((box) => ({
-      x: (box!.originX / canvas.width) * sourceWidth + offsetX,
-      y: (box!.originY / canvas.height) * sourceHeight + offsetY,
-      w: (box!.width / canvas.width) * sourceWidth,
-      h: (box!.height / canvas.height) * sourceHeight,
-    }));
+    .map((detection) => {
+      // keypoints(눈·코·입·귀)의 tight 박스를 얼굴 외곽선으로 사용합니다.
+      // 외곽선 엣지에서 상하좌우 60% 패딩을 별도로 적용합니다.
+      const kps = detection.keypoints;
+      if (kps && kps.length >= 4) {
+        const xs = kps.map((kp) => kp.x * canvas.width);
+        const ys = kps.map((kp) => kp.y * canvas.height);
+        const x0 = Math.min(...xs), x1 = Math.max(...xs);
+        const y0 = Math.min(...ys), y1 = Math.max(...ys);
+        return {
+          x: (x0 / canvas.width) * sourceWidth + offsetX,
+          y: (y0 / canvas.height) * sourceHeight + offsetY,
+          w: ((x1 - x0) / canvas.width) * sourceWidth,
+          h: ((y1 - y0) / canvas.height) * sourceHeight,
+        };
+      }
+      // keypoints가 없을 때 boundingBox 폴백
+      const box = detection.boundingBox;
+      if (!box) return null;
+      return {
+        x: (box.originX / canvas.width) * sourceWidth + offsetX,
+        y: (box.originY / canvas.height) * sourceHeight + offsetY,
+        w: (box.width / canvas.width) * sourceWidth,
+        h: (box.height / canvas.height) * sourceHeight,
+      };
+    })
+    .filter(Boolean) as BoundingBox[];
 }
 
 function cropFromBox(image: HTMLImageElement, box: BoundingBox) {
