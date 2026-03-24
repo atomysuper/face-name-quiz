@@ -58,13 +58,13 @@ function clampBox(box: BoundingBox, imageWidth: number, imageHeight: number): Bo
 }
 
 function expandBoundingBox(box: BoundingBox, imageWidth: number, imageHeight: number): BoundingBox {
-  // MediaPipe 감지 박스는 대략 눈썹~턱 사이만 포함합니다.
-  // 머리 꼭대기까지 올리려면 박스 높이 110% 이상 위로 올려야 하고,
-  // 어깨까지 내리려면 아래로 박스 높이만큼 추가로 내려야 합니다.
-  const padLeft   = Math.max(box.w * 0.38, 24);
-  const padRight  = Math.max(box.w * 0.38, 24);
-  const padTop    = Math.max(box.h * 1.1,  36); // 머리 꼭대기 + 여유
-  const padBottom = Math.max(box.h * 0.95, 30); // 목 아래 어깨까지
+  // MediaPipe 박스는 대략 눈썹~턱 사이만 포함합니다.
+  // 머리 꼭대기까지 포함하려면 얼굴 높이의 150% 이상 위로 올려야 하고,
+  // 어깨까지 포함하려면 아래도 얼굴 높이의 130% 이상 내려야 합니다.
+  const padLeft   = Math.max(box.w * 0.60, 30);
+  const padRight  = Math.max(box.w * 0.60, 30);
+  const padTop    = Math.max(box.h * 1.50, 40); // 정수리까지 충분히
+  const padBottom = Math.max(box.h * 1.30, 38); // 어깨까지 충분히
 
   return clampBox(
     {
@@ -171,8 +171,8 @@ async function getDetector(): Promise<FaceDetector> {
           modelAssetPath: modelPath,
         },
         runningMode: 'IMAGE',
-        minDetectionConfidence: 0.2,
-        minSuppressionThreshold: 0.15,
+        minDetectionConfidence: 0.45,
+        minSuppressionThreshold: 0.25,
       });
     })();
   }

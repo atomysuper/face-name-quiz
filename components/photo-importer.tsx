@@ -49,9 +49,11 @@ export function PhotoImporter() {
   const [manualMode, setManualMode] = useState(false);
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
+  const [adjustingCropId, setAdjustingCropId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const photoStageRef = useRef<HTMLDivElement | null>(null);
   const cropsRef = useRef<DetectedCrop[]>([]);
 
   useEffect(() => {
@@ -94,6 +96,20 @@ export function PhotoImporter() {
     setCrops([]);
     setDragState(null);
     setImageSize(null);
+    setAdjustingCropId(null);
+  }
+
+  function handleStartAdjust(cropId: string) {
+    setAdjustingCropId(cropId);
+    setManualMode(true);
+    setMessage('위치를 조정할 새 박스를 사진 위에 드래그해서 그려주세요.');
+    photoStageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function handleCancelAdjust() {
+    setAdjustingCropId(null);
+    setManualMode(false);
+    setMessage(null);
   }
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -235,11 +251,28 @@ export function PhotoImporter() {
 
     try {
       const manualCrop = await createManualCrop(selectedFile, nextBox);
-      setCrops((current) => {
-        const filtered = current.filter((crop) => !overlaps(crop.bbox, nextBox));
-        return [...filtered, manualCrop];
-      });
-      setMessage('수동 박스를 추가했습니다. 겹치는 자동 박스는 새 박스로 교체했습니다.');
+
+      if (adjustingCropId) {
+        // 위치 조정 모드: 지정된 크롭만 교체
+        const targetId = adjustingCropId;
+        setAdjustingCropId(null);
+        setManualMode(false);
+        setCrops((current) => {
+          const target = current.find((c) => c.id === targetId);
+          if (target) {
+            URL.revokeObjectURL(target.previewUrl);
+          }
+          return current.map((c) => (c.id === targetId ? manualCrop : c));
+        });
+        setMessage('위치 조정이 완료되었습니다.');
+      } else {
+        // 일반 수동 추가 모드: 겹치는 박스를 교체
+        setCrops((current) => {
+          const filtered = current.filter((crop) => !overlaps(crop.bbox, nextBox));
+          return [...filtered, manualCrop];
+        });
+        setMessage('수동 박스를 추가했습니다. 겹치는 자동 박스는 새 박스로 교체했습니다.');
+      }
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
     }
@@ -328,13 +361,21 @@ export function PhotoImporter() {
     }
   }
 
-  function renderOverlayBox(box: BoundingBox, key: string, tone: 'auto' | 'manual' | 'draft') {
+  function renderOverlayBox(box: BoundingBox, key: string, tone: 'auto' | 'manual' | 'draft' | 'adjusting') {
     if (!imageSize) {
       return null;
     }
 
-    const color = tone === 'manual' ? 'rgba(20,127,80,0.95)' : tone === 'draft' ? 'rgba(217,72,95,0.95)' : 'rgba(34,103,255,0.95)';
-    const background = tone === 'manual' ? 'rgba(20,127,80,0.14)' : tone === 'draft' ? 'rgba(217,72,95,0.12)' : 'rgba(34,103,255,0.12)';
+    const color =
+      tone === 'adjusting' ? 'rgba(245,158,11,1)' :
+      tone === 'manual'    ? 'rgba(20,127,80,0.95)' :
+      tone === 'draft'     ? 'rgba(217,72,95,0.95)' :
+                             'rgba(34,103,255,0.95)';
+    const background =
+      tone === 'adjusting' ? 'rgba(245,158,11,0.18)' :
+      tone === 'manual'    ? 'rgba(20,127,80,0.14)' :
+      tone === 'draft'     ? 'rgba(217,72,95,0.12)' :
+                             'rgba(34,103,255,0.12)';
 
     return (
       <div
@@ -346,6 +387,7 @@ export function PhotoImporter() {
           width: `${(box.w / imageSize.width) * 100}%`,
           height: `${(box.h / imageSize.height) * 100}%`,
           borderColor: color,
+          borderWidth: tone === 'adjusting' ? '3px' : '2px',
           background,
         }}
       />
@@ -383,13 +425,18 @@ export function PhotoImporter() {
         </div>
 
         <div className="row gap-sm wrap">
-          <button className={`button ${manualMode ? 'primary' : 'ghost'}`} type="button" onClick={() => setManualMode((value) => !value)} disabled={!selectedFile}>
+          <button className={`button ${manualMode ? 'primary' : 'ghost'}`} type="button" onClick={() => { setManualMode((value) => !value); setAdjustingCropId(null); }} disabled={!selectedFile}>
             {manualMode ? '수동 추가 모드 켜짐' : '수동 추가 모드'}
           </button>
           <button className="button ghost" type="button" onClick={() => void handleRerunDetection()} disabled={!selectedFile || detecting}>
             자동 인식 다시 실행
           </button>
           <span className="badge">{activeCrops.length}개 얼굴 crop</span>
+          {adjustingCropId ? (
+            <button className="button ghost" type="button" onClick={handleCancelAdjust}>
+              조정 취소
+            </button>
+          ) : null}
         </div>
 
         <p className="muted-text small-text">
@@ -413,13 +460,26 @@ export function PhotoImporter() {
       </div>
 
       {photoPreviewUrl ? (
-        <div className="card stack-md">
+        <div className="card stack-md" ref={photoStageRef}>
           <div className="row space-between wrap">
             <h3>원본 미리보기</h3>
             <p className="muted-text small-text">
-              {manualMode ? '드래그해서 얼굴 박스를 추가하세요.' : '수동 추가 모드를 켜면 여기서 직접 박스를 그릴 수 있습니다.'}
+              {adjustingCropId
+                ? '주황색 박스 위치를 바꿀 새 박스를 드래그하세요.'
+                : manualMode
+                ? '드래그해서 얼굴 박스를 추가하세요.'
+                : '수동 추가 모드를 켜면 여기서 직접 박스를 그릴 수 있습니다.'}
             </p>
           </div>
+
+          {adjustingCropId ? (
+            <div className="adjust-banner">
+              #{activeCrops.findIndex((c) => c.id === adjustingCropId) + 1}번 얼굴 위치 조정 중 — 사진 위에 새 박스를 드래그해서 그려주세요.
+              <button className="button ghost" type="button" style={{ marginLeft: 12, padding: '2px 12px', fontSize: 13 }} onClick={handleCancelAdjust}>
+                취소
+              </button>
+            </div>
+          ) : null}
 
           <div className="photo-stage-wrap">
             <div
@@ -443,7 +503,15 @@ export function PhotoImporter() {
               />
               <div className="photo-overlay">
                 {activeCrops.map((crop) =>
-                  renderOverlayBox(crop.bbox, crop.id, crop.source === 'manual' ? 'manual' : 'auto'),
+                  renderOverlayBox(
+                    crop.bbox,
+                    crop.id,
+                    crop.id === adjustingCropId
+                      ? 'adjusting'
+                      : crop.source === 'manual'
+                      ? 'manual'
+                      : 'auto',
+                  ),
                 )}
                 {draftBox ? renderOverlayBox(draftBox, 'draft', 'draft') : null}
               </div>
@@ -462,19 +530,32 @@ export function PhotoImporter() {
 
           <div className="face-grid">
             {activeCrops.map((crop, index) => (
-              <article key={crop.id} className="face-card">
+              <article
+                key={crop.id}
+                className={`face-card${crop.id === adjustingCropId ? ' face-card-adjusting' : ''}`}
+              >
                 <img src={crop.previewUrl} alt={`얼굴 crop ${index + 1}`} />
                 <div className="stack-xs">
                   <p className="small-text">
                     #{index + 1} · {Math.round(crop.bbox.w)}×{Math.round(crop.bbox.h)} · {crop.source === 'manual' ? '수동' : '자동'}
                   </p>
-                  <button
-                    className="button danger"
-                    type="button"
-                    onClick={() => handleRemoveCrop(crop.id)}
-                  >
-                    제거
-                  </button>
+                  <div className="row gap-sm">
+                    <button
+                      className="button ghost"
+                      type="button"
+                      style={{ flex: 1 }}
+                      onClick={() => handleStartAdjust(crop.id)}
+                    >
+                      위치 조정
+                    </button>
+                    <button
+                      className="button danger"
+                      type="button"
+                      onClick={() => handleRemoveCrop(crop.id)}
+                    >
+                      제거
+                    </button>
+                  </div>
                 </div>
               </article>
             ))}

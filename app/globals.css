@@ -816,6 +816,24 @@ p { margin: 0; }
   background: rgba(99, 102, 241, 0.08);
 }
 
+.adjust-banner {
+  display: flex;
+  align-items: center;
+  background: #FFF8E8;
+  border: 1.5px solid #F59E0B;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #92400E;
+  gap: 4px;
+}
+
+.face-card-adjusting {
+  border: 2px solid #F59E0B !important;
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.18) !important;
+}
+
 /* ─── Enter page ────────────────────────────────── */
 
 .enter-page-wrap {
