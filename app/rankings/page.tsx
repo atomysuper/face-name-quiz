@@ -24,10 +24,7 @@ export default async function RankingsPage() {
 
   return (
     <section className="stack-lg">
-      <div className="stack-xs">
-        <h1>🏆 순위표</h1>
-        <p className="lead">5개 이상 맞힌 사람들의 평균점수 순위입니다.</p>
-      </div>
+      <h1>🏆 순위표</h1>
 
       <Link className="button ghost" href="/quiz">
         퀴즈 시작하기

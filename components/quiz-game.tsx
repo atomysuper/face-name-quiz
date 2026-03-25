@@ -410,7 +410,7 @@ export function QuizGame() {
         <div className="quiz-stat-row">
           <div className="quiz-stat">
             <span style={{ color: 'var(--success)' }}>✓</span>
-            <span>정답</span>
+            <span className="quiz-stat-label">정답</span>
             <span className="quiz-stat-value" style={{ color: 'var(--success)' }}>
               {sessionCorrect}
             </span>
@@ -418,7 +418,7 @@ export function QuizGame() {
           <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
           <div className="quiz-stat">
             <span style={{ color: 'var(--danger)' }}>✕</span>
-            <span>오답</span>
+            <span className="quiz-stat-label">오답</span>
             <span className="quiz-stat-value" style={{ color: 'var(--danger)' }}>
               {sessionWrong}
             </span>
@@ -427,7 +427,7 @@ export function QuizGame() {
             <>
               <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
               <div className="quiz-stat">
-                <span>정답률</span>
+                <span className="quiz-stat-label">정답률</span>
                 <span className="quiz-stat-value">
                   {Math.round((sessionCorrect / (sessionCorrect + sessionWrong)) * 100)}%
                 </span>
@@ -438,7 +438,7 @@ export function QuizGame() {
             <>
               <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
               <div className="quiz-stat">
-                <span>평균점수</span>
+                <span className="quiz-stat-label">평균점수</span>
                 <span className="quiz-stat-value" style={{ color: 'var(--primary)' }}>
                   {Math.round(sessionScores.reduce((a, b) => a + b, 0) / sessionScores.length)}점
                 </span>

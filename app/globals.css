@@ -1200,6 +1200,30 @@ p { margin: 0; }
   .review-grid {
     grid-template-columns: 1fr;
   }
+
+  .quiz-stat-label {
+    display: none;
+  }
+
+  .quiz-stat-row {
+    gap: 10px;
+  }
+
+  .rankings-table th,
+  .rankings-table td {
+    padding: 9px 8px;
+    font-size: 0.82rem;
+  }
+
+  .rankings-table th:last-child,
+  .rankings-table td:last-child {
+    display: none;
+  }
+
+  .mode-badge {
+    font-size: 0.7rem;
+    padding: 1px 6px;
+  }
 }
 
 /* ── Rankings ───────────────────────────────────────── */
