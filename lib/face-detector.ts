@@ -229,6 +229,11 @@ function cropFromBox(image: HTMLImageElement, box: BoundingBox) {
   return canvas;
 }
 
+/** 모델을 백그라운드에서 미리 로드합니다 (호출 후 바로 반환). */
+export function preloadDetector(): void {
+  getDetector().catch(() => {});
+}
+
 async function getDetector(): Promise<FaceDetector> {
   if (!detectorPromise) {
     const { wasmRoot, modelPath } = getPublicEnv();

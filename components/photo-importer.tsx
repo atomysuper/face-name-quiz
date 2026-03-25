@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { createManualCrop, detectAndCropFaces, resizeImageFile } from '@/lib/face-detector';
+import { createManualCrop, detectAndCropFaces, preloadDetector, resizeImageFile } from '@/lib/face-detector';
 import type { BoundingBox, DetectedCrop, ImportFacePayload } from '@/lib/types';
 import { clamp, sanitizeFileSegment, toErrorMessage } from '@/lib/utils';
 
@@ -63,6 +63,9 @@ export function PhotoImporter() {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const photoStageRef = useRef<HTMLDivElement | null>(null);
   const cropsRef = useRef<DetectedCrop[]>([]);
+
+  // 컴포넌트가 마운트되자마자 모델을 백그라운드로 미리 로드
+  useEffect(() => { preloadDetector(); }, []);
 
   useEffect(() => {
     cropsRef.current = crops;

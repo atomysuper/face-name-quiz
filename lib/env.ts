@@ -55,7 +55,7 @@ export function getPublicEnv() {
   return {
     wasmRoot:
       process.env.NEXT_PUBLIC_MEDIAPIPE_WASM_ROOT ??
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm',
+      '/mediapipe/wasm',
     modelPath:
       process.env.NEXT_PUBLIC_MEDIAPIPE_MODEL_PATH ??
       '/models/blaze_face_short_range.tflite',
