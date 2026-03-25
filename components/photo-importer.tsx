@@ -618,22 +618,6 @@ export function PhotoImporter() {
             </p>
           </div>
 
-          <div className="adjust-banner" style={{ visibility: adjustingCropId && adjustBox ? 'visible' : 'hidden' }}>
-            <span>
-              {adjustingCropId
-                ? `#${activeCrops.findIndex((c) => c.id === adjustingCropId) + 1}번 얼굴 — 모서리·가장자리 드래그로 범위 조정, 상자 안 드래그로 이동`
-                : '\u00A0'}
-            </span>
-            <div className="row gap-sm" style={{ marginLeft: 'auto' }}>
-              <button className="button primary" type="button" style={{ padding: '3px 14px', fontSize: 13 }} onClick={() => void handleApplyAdjust()}>
-                적용
-              </button>
-              <button className="button ghost" type="button" style={{ padding: '3px 12px', fontSize: 13 }} onClick={handleCancelAdjust}>
-                취소
-              </button>
-            </div>
-          </div>
-
           <div className="photo-stage-wrap">
             <div
               className={`photo-stage ${adjustBox ? '' : manualMode ? 'manual-on' : ''}`}
@@ -728,6 +712,23 @@ export function PhotoImporter() {
               </div>
             </div>
           </div>
+          {/* 위치 조정 컨트롤 — 사진 아래 고정, visibility로 공간 항상 유지 */}
+          <div className="adjust-banner" style={{ visibility: adjustingCropId && adjustBox ? 'visible' : 'hidden' }}>
+            <span>
+              {adjustingCropId
+                ? `#${activeCrops.findIndex((c) => c.id === adjustingCropId) + 1}번 얼굴 — 모서리·가장자리 드래그로 범위 조정, 상자 안 드래그로 이동`
+                : '\u00A0'}
+            </span>
+            <div className="row gap-sm" style={{ marginLeft: 'auto', flexShrink: 0 }}>
+              <button className="button primary" type="button" style={{ padding: '3px 14px', fontSize: 13 }} onClick={() => void handleApplyAdjust()}>
+                적용
+              </button>
+              <button className="button ghost" type="button" style={{ padding: '3px 12px', fontSize: 13 }} onClick={handleCancelAdjust}>
+                취소
+              </button>
+            </div>
+          </div>
+
           <p className="muted-text small-text">모바일에서는 손가락으로 한번 크게 확대해서 위치를 확인한 뒤, 얼굴보다 조금 넉넉하게 드래그하면 수동 박스가 더 잘 맞습니다.</p>
         </div>
       ) : null}
