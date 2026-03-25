@@ -618,19 +618,21 @@ export function PhotoImporter() {
             </p>
           </div>
 
-          {adjustingCropId && adjustBox ? (
-            <div className="adjust-banner">
-              <span>#{activeCrops.findIndex((c) => c.id === adjustingCropId) + 1}번 얼굴 — 모서리·가장자리 드래그로 범위 조정, 상자 안 드래그로 이동</span>
-              <div className="row gap-sm" style={{ marginLeft: 'auto' }}>
-                <button className="button primary" type="button" style={{ padding: '3px 14px', fontSize: 13 }} onClick={() => void handleApplyAdjust()}>
-                  적용
-                </button>
-                <button className="button ghost" type="button" style={{ padding: '3px 12px', fontSize: 13 }} onClick={handleCancelAdjust}>
-                  취소
-                </button>
-              </div>
+          <div className="adjust-banner" style={{ visibility: adjustingCropId && adjustBox ? 'visible' : 'hidden' }}>
+            <span>
+              {adjustingCropId
+                ? `#${activeCrops.findIndex((c) => c.id === adjustingCropId) + 1}번 얼굴 — 모서리·가장자리 드래그로 범위 조정, 상자 안 드래그로 이동`
+                : '\u00A0'}
+            </span>
+            <div className="row gap-sm" style={{ marginLeft: 'auto' }}>
+              <button className="button primary" type="button" style={{ padding: '3px 14px', fontSize: 13 }} onClick={() => void handleApplyAdjust()}>
+                적용
+              </button>
+              <button className="button ghost" type="button" style={{ padding: '3px 12px', fontSize: 13 }} onClick={handleCancelAdjust}>
+                취소
+              </button>
             </div>
-          ) : null}
+          </div>
 
           <div className="photo-stage-wrap">
             <div
