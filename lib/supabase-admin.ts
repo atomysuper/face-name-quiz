@@ -7,6 +7,7 @@ import type {
   FaceCard,
   FaceStatus,
   PersonRecord,
+  RankingRecord,
   SubmissionRecord,
 } from '@/lib/types';
 import {
@@ -583,6 +584,39 @@ export async function recordQuizAttempt(payload: AttemptPayload): Promise<void> 
   });
 
   ensureNoError(error, 'quiz_attempts 저장 실패');
+}
+
+export async function createRanking(params: {
+  nickname: string;
+  score: number;
+  correctCount: number;
+}): Promise<void> {
+  const { error } = await supabaseAdmin.from('rankings').insert({
+    nickname: params.nickname,
+    score: params.score,
+    correct_count: params.correctCount,
+  });
+  ensureNoError(error, '순위 등록 실패');
+}
+
+export async function listRankings(limit = 30): Promise<RankingRecord[]> {
+  const { data, error } = await supabaseAdmin
+    .from('rankings')
+    .select('id, nickname, score, correct_count, created_at')
+    .order('score', { ascending: false })
+    .order('correct_count', { ascending: false })
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  ensureNoError(error, '순위 조회 실패');
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    nickname: row.nickname,
+    score: row.score,
+    correctCount: row.correct_count,
+    createdAt: row.created_at,
+  }));
 }
 
 export function errorMessageWithContext(context: string, error: unknown): Error {

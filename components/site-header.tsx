@@ -8,6 +8,7 @@ const desktopMenuItems = [
   { href: '/quiz', label: '퀴즈' },
   { href: '/upload', label: '업로드' },
   { href: '/contribute', label: '이름 제보' },
+  { href: '/rankings', label: '순위표' },
   { href: '/admin/review', label: '검토' },
 ] as const;
 
@@ -18,6 +19,7 @@ const mobileQuickLinks = [
 const mobileMenuItems = [
   { href: '/upload', label: '업로드' },
   { href: '/contribute', label: '이름 제보' },
+  { href: '/rankings', label: '순위표' },
   { href: '/admin/review', label: '검토' },
 ] as const;
 

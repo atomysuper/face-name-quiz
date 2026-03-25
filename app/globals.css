@@ -1201,3 +1201,73 @@ p { margin: 0; }
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Rankings ───────────────────────────────────────── */
+
+.ranking-register-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.ranking-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ranking-form .input {
+  width: 180px;
+  font-size: 0.9rem;
+  padding: 6px 10px;
+}
+
+.rankings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.rankings-table th {
+  background: var(--surface-alt, #f5f5f5);
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+}
+
+.rankings-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.rankings-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.rankings-table tbody tr:hover {
+  background: var(--surface-alt, #fafafa);
+}
+
+.rankings-table .ranking-rank {
+  font-weight: 700;
+  min-width: 48px;
+}
+
+.rankings-table .ranking-nickname {
+  font-weight: 600;
+}
+
+.rankings-table tr.ranking-top td {
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+}

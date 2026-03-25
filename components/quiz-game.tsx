@@ -64,6 +64,9 @@ export function QuizGame() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [rankingState, setRankingState] = useState<'idle' | 'entering' | 'submitting' | 'done' | 'error'>('idle');
+  const [rankingNickname, setRankingNickname] = useState('');
+  const [rankingError, setRankingError] = useState<string | null>(null);
 
   const closeLightbox = useCallback(() => setLightboxUrl(null), []);
   useEffect(() => {
@@ -238,6 +241,27 @@ export function QuizGame() {
     e.preventDefault();
     if (!guess.trim()) return;
     void handleAnswer(guess);
+  }
+
+  async function submitRanking(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const nickname = rankingNickname.trim();
+    if (!nickname) return;
+    setRankingState('submitting');
+    try {
+      const totalScore = sessionScores.reduce((a, b) => a + b, 0);
+      const res = await fetch('/api/rankings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname, score: totalScore, correctCount: sessionCorrect }),
+      });
+      const data = await res.json() as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? '등록 실패');
+      setRankingState('done');
+    } catch (err) {
+      setRankingError(toErrorMessage(err));
+      setRankingState('error');
+    }
   }
 
   if (loading) {
@@ -420,6 +444,40 @@ export function QuizGame() {
             </>
           )}
         </div>
+
+        {sessionCorrect >= 10 && (
+          <div className="ranking-register-section">
+            {rankingState === 'idle' && (
+              <button className="button primary" type="button" onClick={() => setRankingState('entering')}>
+                🏆 순위 등록
+              </button>
+            )}
+            {rankingState === 'entering' && (
+              <form className="ranking-form" onSubmit={(e) => void submitRanking(e)}>
+                <input
+                  className="input"
+                  type="text"
+                  value={rankingNickname}
+                  onChange={(e) => setRankingNickname(e.target.value)}
+                  placeholder="닉네임 입력 (최대 20자)"
+                  maxLength={20}
+                  autoFocus
+                />
+                <button className="button primary" type="submit">등록</button>
+                <button className="button" type="button" onClick={() => setRankingState('idle')}>취소</button>
+              </form>
+            )}
+            {rankingState === 'submitting' && (
+              <span className="muted-text" style={{ fontSize: '0.9rem' }}>등록 중…</span>
+            )}
+            {rankingState === 'done' && (
+              <span style={{ color: 'var(--success)', fontWeight: 600 }}>✓ 순위 등록 완료!</span>
+            )}
+            {rankingState === 'error' && (
+              <span className="error-text" style={{ fontSize: '0.85rem' }}>{rankingError}</span>
+            )}
+          </div>
+        )}
       </div>
 
       {lightboxUrl ? (

@@ -69,3 +69,11 @@ export type QuizFace = FaceCard & {
   personId: string;
   personName: string;
 };
+
+export type RankingRecord = {
+  id: string;
+  nickname: string;
+  score: number;
+  correctCount: number;
+  createdAt: string;
+};
