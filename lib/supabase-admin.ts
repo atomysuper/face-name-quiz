@@ -596,7 +596,7 @@ export async function createRanking(params: {
     nickname: params.nickname,
     score: params.score,
     correct_count: params.correctCount,
-    mode: params.mode,
+    quiz_mode: params.mode,
   });
   ensureNoError(error, '순위 등록 실패');
 }
@@ -604,7 +604,7 @@ export async function createRanking(params: {
 export async function listRankings(limit = 30): Promise<RankingRecord[]> {
   const { data, error } = await supabaseAdmin
     .from('rankings')
-    .select('id, nickname, score, correct_count, mode, created_at')
+    .select('id, nickname, score, correct_count, quiz_mode, created_at')
     .order('score', { ascending: false })
     .order('correct_count', { ascending: false })
     .order('created_at', { ascending: true })
@@ -617,7 +617,7 @@ export async function listRankings(limit = 30): Promise<RankingRecord[]> {
     nickname: row.nickname,
     score: row.score,
     correctCount: row.correct_count,
-    mode: row.mode ?? 'multiple-choice',
+    mode: row.quiz_mode ?? 'multiple-choice',
     createdAt: row.created_at,
   }));
 }
