@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 import {
   applyAttempt,
@@ -52,6 +52,15 @@ export function QuizGame() {
   const [attemptNumber, setAttemptNumber] = useState(1);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
+  const closeLightbox = useCallback(() => setLightboxUrl(null), []);
+  useEffect(() => {
+    if (!lightboxUrl) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeLightbox(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightboxUrl, closeLightbox]);
 
   const startedAtRef = useRef<number>(Date.now());
   const nextTimerRef = useRef<number | null>(null);
@@ -245,7 +254,12 @@ export function QuizGame() {
     <section className="stack-md animate-fade-up">
       <div className="quiz-shell">
         <div className="quiz-face-card">
-          <img src={currentFace.cropUrl} alt="퀴즈 얼굴" />
+          <img
+            src={currentFace.cropUrl}
+            alt="퀴즈 얼굴"
+            style={{ cursor: 'zoom-in' }}
+            onClick={() => setLightboxUrl(currentFace.cropUrl)}
+          />
         </div>
 
         <div className={questionCardClass}>
@@ -364,6 +378,18 @@ export function QuizGame() {
           )}
         </div>
       </div>
+
+      {lightboxUrl ? (
+        <div className="lightbox-backdrop" onClick={closeLightbox}>
+          <button className="lightbox-close" onClick={closeLightbox} aria-label="닫기">✕</button>
+          <img
+            className="lightbox-img"
+            src={lightboxUrl}
+            alt="확대 보기"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      ) : null}
     </section>
   );
 }
