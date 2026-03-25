@@ -354,6 +354,55 @@ export async function createManualCrop(
   };
 }
 
+/**
+ * 클릭 위치 근처의 얼굴을 재탐지합니다.
+ * 자동 탐지가 놓친 얼굴을 직접 클릭해서 추가할 때 사용합니다.
+ */
+export async function detectFaceNear(
+  file: File,
+  clickX: number,
+  clickY: number,
+): Promise<DetectedCrop[]> {
+  const detector = await getDetector();
+  const image = await fileToImage(file);
+  const W = image.naturalWidth;
+  const H = image.naturalHeight;
+
+  // 클릭 위치 중심으로 이미지의 40% 크기 패치를 잘라 탐지
+  const patchW = Math.round(W * 0.40);
+  const patchH = Math.round(H * 0.40);
+  const srcX = Math.max(0, Math.min(Math.round(clickX - patchW / 2), W - patchW));
+  const srcY = Math.max(0, Math.min(Math.round(clickY - patchH / 2), H - patchH));
+  const actualW = Math.min(patchW, W - srcX);
+  const actualH = Math.min(patchH, H - srcY);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = TILE_RENDER_SIZE;
+  canvas.height = Math.round(TILE_RENDER_SIZE * (actualH / actualW));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return [];
+  ctx.drawImage(image, srcX, srcY, actualW, actualH, 0, 0, canvas.width, canvas.height);
+
+  const rawBoxes = extractBoxesFromCanvas(detector, canvas, srcX, srcY, actualW, actualH);
+  const clamped = rawBoxes.map((b) => clampBox(b, W, H));
+  const deduped = dedupeBoxes(clamped);
+  const expanded = deduped.map((b) => clampBox(expandBoundingBox(b, W, H), W, H));
+
+  const crops: DetectedCrop[] = [];
+  for (const box of expanded) {
+    const cropCanvas = cropFromBox(image, box);
+    const blob = await canvasToBlob(cropCanvas, 'image/jpeg', 0.92);
+    crops.push({
+      id: crypto.randomUUID(),
+      bbox: box,
+      blob,
+      previewUrl: URL.createObjectURL(blob),
+      source: 'auto',
+    });
+  }
+  return crops;
+}
+
 export async function detectAndCropFaces(file: File): Promise<DetectedCrop[]> {
   const detector = await getDetector();
   const image = await fileToImage(file);

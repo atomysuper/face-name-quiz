@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { createManualCrop, detectAndCropFaces, preloadDetector, resizeImageFile } from '@/lib/face-detector';
+import { createManualCrop, detectAndCropFaces, detectFaceNear, preloadDetector, resizeImageFile } from '@/lib/face-detector';
 import type { BoundingBox, DetectedCrop, ImportFacePayload } from '@/lib/types';
 import { clamp, sanitizeFileSegment, toErrorMessage } from '@/lib/utils';
 
@@ -63,6 +63,8 @@ export function PhotoImporter() {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const photoStageRef = useRef<HTMLDivElement | null>(null);
   const cropsRef = useRef<DetectedCrop[]>([]);
+  // 탭(드래그 없는 클릭) 감지용 — 비수동 모드에서 얼굴 재탐지에 사용
+  const tapDownRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
 
   // 컴포넌트가 마운트되자마자 모델을 백그라운드로 미리 로드
   useEffect(() => { preloadDetector(); }, []);
@@ -308,17 +310,17 @@ export function PhotoImporter() {
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if (adjustBox) return; // 리사이즈 모드 중에는 새 박스 그리기 비활성
-    if (!manualMode || !imageSize) {
+
+    const point = getRelativePosition(event);
+    if (!point || !imageSize) return;
+
+    if (!manualMode) {
+      // 비수동 모드: 탭 시작점만 기록 (얼굴 재탐지용)
+      tapDownRef.current = { x: point.x, y: point.y, moved: false };
       return;
     }
 
     event.preventDefault();
-
-    const point = getRelativePosition(event);
-    if (!point) {
-      return;
-    }
-
     event.currentTarget.setPointerCapture(event.pointerId);
     setDragState({
       startX: point.x,
@@ -329,6 +331,17 @@ export function PhotoImporter() {
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    // 탭 추적: 8px 이상 이동하면 탭 취소
+    if (tapDownRef.current && !tapDownRef.current.moved) {
+      const point = getRelativePosition(event);
+      if (point && imageSize) {
+        const dx = point.x - tapDownRef.current.x;
+        const dy = point.y - tapDownRef.current.y;
+        const distPx = Math.sqrt(dx * dx + dy * dy) / (imageSize.width / (imageRef.current?.getBoundingClientRect().width ?? imageSize.width));
+        if (distPx > 8) tapDownRef.current.moved = true;
+      }
+    }
+
     if (!dragState) {
       return;
     }
@@ -352,6 +365,47 @@ export function PhotoImporter() {
   }
 
   async function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    // 비수동 모드 탭: 얼굴 재탐지
+    const tap = tapDownRef.current;
+    tapDownRef.current = null;
+    if (!manualMode && !adjustBox && tap && !tap.moved && selectedFile && imageSize) {
+      setDetecting(true);
+      setMessage(null);
+      setErrorMessage(null);
+      try {
+        const found = await detectFaceNear(selectedFile, tap.x, tap.y);
+        if (found.length === 0) {
+          setMessage('해당 위치에서 얼굴을 찾지 못했습니다. 수동 추가 모드로 직접 박스를 그려주세요.');
+        } else {
+          setCrops((current) => {
+            // 기존 박스와 IoU 0.28 이상 겹치면 건너뜀
+            const newCrops = found.filter(
+              (fc) => !current.some((c) => {
+                const x1 = Math.max(fc.bbox.x, c.bbox.x);
+                const y1 = Math.max(fc.bbox.y, c.bbox.y);
+                const x2 = Math.min(fc.bbox.x + fc.bbox.w, c.bbox.x + c.bbox.w);
+                const y2 = Math.min(fc.bbox.y + fc.bbox.h, c.bbox.y + c.bbox.h);
+                const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+                const union = fc.bbox.w * fc.bbox.h + c.bbox.w * c.bbox.h - inter;
+                return union > 0 && inter / union >= 0.28;
+              }),
+            );
+            if (newCrops.length > 0) {
+              setMessage(`얼굴 ${newCrops.length}명을 추가했습니다.`);
+            } else {
+              setMessage('이미 인식된 얼굴입니다.');
+            }
+            return [...current, ...newCrops];
+          });
+        }
+      } catch (err) {
+        setErrorMessage(toErrorMessage(err));
+      } finally {
+        setDetecting(false);
+      }
+      return;
+    }
+
     if (!dragState || !selectedFile || !imageSize) {
       setDragState(null);
       return;
@@ -621,7 +675,7 @@ export function PhotoImporter() {
                 ? '주황색 박스 위치를 바꿀 새 박스를 드래그하세요.'
                 : manualMode
                 ? '드래그해서 얼굴 박스를 추가하세요.'
-                : '수동 추가 모드를 켜면 여기서 직접 박스를 그릴 수 있습니다.'}
+                : '놓친 얼굴 위치를 클릭하면 재탐지합니다.'}
             </p>
           </div>
 
