@@ -13,7 +13,6 @@ const desktopMenuItems = [
 
 const mobileQuickLinks = [
   { href: '/quiz', label: '퀴즈' },
-  { href: '/upload', label: '업로드' },
 ] as const;
 
 const mobileMenuItems = [
