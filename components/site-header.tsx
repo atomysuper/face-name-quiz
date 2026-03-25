@@ -13,11 +13,11 @@ const desktopMenuItems = [
 
 const mobileQuickLinks = [
   { href: '/quiz', label: '퀴즈' },
-  { href: '/contribute', label: '이름 제보' },
+  { href: '/upload', label: '업로드' },
 ] as const;
 
 const mobileMenuItems = [
-  { href: '/upload', label: '업로드' },
+  { href: '/contribute', label: '이름 제보' },
   { href: '/admin/review', label: '검토' },
 ] as const;
 
