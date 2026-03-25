@@ -87,13 +87,19 @@ export function PhotoImporter() {
     };
   }, []);
 
-  // 위치 조정 모드에서 엔터 → 적용
+  // 위치 조정 모드에서 엔터 → 적용, Delete → 삭제
   useEffect(() => {
     if (!adjustBox) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Enter') {
         e.preventDefault();
         handleApplyAdjust();
+      } else if (e.key === 'Delete') {
+        e.preventDefault();
+        if (adjustingCropId) {
+          handleRemoveCrop(adjustingCropId);
+          handleCancelAdjust();
+        }
       }
     }
     window.addEventListener('keydown', onKeyDown);
@@ -499,6 +505,7 @@ export function PhotoImporter() {
           pointerEvents: clickable ? 'auto' : 'none',
           cursor: clickable ? 'pointer' : 'default',
         }}
+        onPointerDown={clickable ? (e) => { e.stopPropagation(); e.preventDefault(); } : undefined}
         onClick={clickable && cropId ? (e) => { e.stopPropagation(); handleStartAdjust(cropId); } : undefined}
         title={clickable ? '클릭해서 위치 조정' : undefined}
       />
