@@ -597,6 +597,7 @@ p { margin: 0; }
 
 .review-card > div {
   padding: 16px;
+  min-width: 0;
 }
 
 /* ─── Submissions ────────────────────────────────── */
@@ -1020,8 +1021,9 @@ p { margin: 0; }
   }
 
   .review-card img {
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 3 / 4;
     object-fit: cover;
+    object-position: top center;
     width: 100%;
   }
 }

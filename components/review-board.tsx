@@ -315,7 +315,7 @@ export function ReviewBoard() {
                 <img src={face.cropUrl} alt={`검토할 얼굴 ${index + 1}`} loading="lazy" />
                 <div className="stack-sm">
                   <div>
-                    <p className="small-text muted-text" style={{ fontWeight: 600 }}>#{index + 1} · {face.photoLabel ?? '사진 없음'}</p>
+                    <p className="small-text muted-text" style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{index + 1} · {face.photoLabel ?? '사진 없음'}</p>
                     <span style={{
                       display: 'inline-block',
                       marginTop: 4,
@@ -432,7 +432,7 @@ export function ReviewBoard() {
                           onClick={() => void handleReopen(face.id)}
                           style={{ fontSize: '0.85rem' }}
                         >
-                          검토대기로
+                          대기로
                         </button>
                         <button
                           className="button danger"
