@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { createManualCrop, detectAndCropFaces } from '@/lib/face-detector';
+import { createManualCrop, detectAndCropFaces, resizeImageFile } from '@/lib/face-detector';
 import type { BoundingBox, DetectedCrop, ImportFacePayload } from '@/lib/types';
 import { clamp, sanitizeFileSegment, toErrorMessage } from '@/lib/utils';
 
@@ -197,11 +197,20 @@ export function PhotoImporter() {
 
     try {
       clearCurrentResources();
-      setSelectedFile(file);
-      setLabel(fileNameWithoutExtension(file.name));
-      setPhotoPreviewUrl(URL.createObjectURL(file));
 
-      const detected = await detectAndCropFaces(file);
+      // 큰 사진은 2400px 이하로 줄인 뒤 인식 시작
+      const { file: resizedFile, originalWidth, originalHeight } = await resizeImageFile(file);
+      const wasResized = resizedFile !== file;
+
+      setSelectedFile(resizedFile);
+      setLabel(fileNameWithoutExtension(file.name));
+      setPhotoPreviewUrl(URL.createObjectURL(resizedFile));
+
+      if (wasResized) {
+        setMessage(`원본(${originalWidth}×${originalHeight})을 인식에 맞게 줄인 뒤 얼굴을 찾는 중입니다…`);
+      }
+
+      const detected = await detectAndCropFaces(resizedFile);
       setCrops(detected);
 
       if (detected.length === 0) {

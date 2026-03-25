@@ -11,6 +11,9 @@ let detectorPromise: Promise<FaceDetector> | null = null;
 // 타일을 이 해상도로 렌더해서 작은 얼굴도 크게 보이게 합니다
 const TILE_RENDER_SIZE = 640;
 
+// 업로드 사진을 이 크기 이하로 줄인 뒤 인식을 시작합니다 (속도·메모리 최적화)
+const MAX_UPLOAD_DIMENSION = 2400;
+
 // 촘촘한 타일 설정으로 단체사진의 작은 얼굴도 놓치지 않습니다
 // 6×6 설정이 30명 이상 단체사진에서 핵심 역할을 합니다
 const TILE_CONFIGS = [
@@ -47,6 +50,38 @@ function canvasToBlob(
       resolve(blob);
     }, type, quality);
   });
+}
+
+export async function resizeImageFile(file: File): Promise<{ file: File; originalWidth: number; originalHeight: number }> {
+  const url = URL.createObjectURL(file);
+  const image = new Image();
+  try {
+    image.src = url;
+    await image.decode();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+
+  const { naturalWidth: w, naturalHeight: h } = image;
+
+  if (w <= MAX_UPLOAD_DIMENSION && h <= MAX_UPLOAD_DIMENSION) {
+    return { file, originalWidth: w, originalHeight: h };
+  }
+
+  const scale = Math.min(MAX_UPLOAD_DIMENSION / w, MAX_UPLOAD_DIMENSION / h);
+  const newW = Math.round(w * scale);
+  const newH = Math.round(h * scale);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = newW;
+  canvas.height = newH;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return { file, originalWidth: w, originalHeight: h };
+  ctx.drawImage(image, 0, 0, newW, newH);
+
+  const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
+  const resized = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+  return { file: resized, originalWidth: w, originalHeight: h };
 }
 
 function clampBox(box: BoundingBox, imageWidth: number, imageHeight: number): BoundingBox {
