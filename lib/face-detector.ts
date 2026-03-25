@@ -58,10 +58,13 @@ function clampBox(box: BoundingBox, imageWidth: number, imageHeight: number): Bo
 }
 
 function expandBoundingBox(box: BoundingBox, imageWidth: number, imageHeight: number): BoundingBox {
-  // keypoints tight 박스 엣지에서 상하좌우 60% 패딩
-  const padLeft   = Math.max(box.w * 0.60, 20);
-  const padRight  = Math.max(box.w * 0.60, 20);
-  const padTop    = Math.max(box.h * 0.60, 20);
+  // 귀 포함 tight 박스(≈귀~귀 너비, 눈~입 높이) 기준
+  // 위쪽: 눈 위로 머리카락까지 포함하려면 150%
+  // 아래쪽: 턱 + 목 약간
+  // 좌우: 귀가 이미 포함돼 있으므로 10%만 추가
+  const padLeft   = Math.max(box.w * 0.10, 10);
+  const padRight  = Math.max(box.w * 0.10, 10);
+  const padTop    = Math.max(box.h * 1.50, 30);
   const padBottom = Math.max(box.h * 0.60, 20);
 
   let expanded = clampBox(
@@ -120,7 +123,7 @@ function dedupeBoxes(boxes: BoundingBox[]): BoundingBox[] {
   const kept: BoundingBox[] = [];
 
   for (const box of sorted) {
-    const duplicate = kept.some((target) => intersectionOverUnion(box, target) >= 0.42);
+    const duplicate = kept.some((target) => intersectionOverUnion(box, target) >= 0.28);
     if (!duplicate) {
       kept.push(box);
     }
@@ -161,8 +164,8 @@ function extractBoxesFromCanvas(
       // 눈(0,1)·코(2)·입(3) 4개가 모두 있어야 유효한 얼굴로 인식
       const kps = detection.keypoints;
       if (!kps || kps.length < 4) return null;
-      // 귀(4,5)는 제외하고 눈·코·입만으로 외곽선 tight 박스를 계산
-      const facePts = kps.slice(0, 4);
+      // 귀(4,5)까지 포함해 귀~귀 너비를 tight 박스에 반영
+      const facePts = kps.slice(0, Math.min(kps.length, 6));
       const xs = facePts.map((kp) => kp.x * canvas.width);
       const ys = facePts.map((kp) => kp.y * canvas.height);
       const x0 = Math.min(...xs), x1 = Math.max(...xs);
