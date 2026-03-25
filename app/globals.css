@@ -853,11 +853,34 @@ p { margin: 0; }
 }
 
 .quiz-result-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   padding: 10px 14px;
   border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: 0.9rem;
   animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.score-badge {
+  flex-shrink: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.score-badge-correct {
+  background: var(--success);
+  color: #fff;
+}
+
+.score-badge-wrong {
+  background: var(--danger);
+  color: #fff;
 }
 
 .quiz-result-message.correct {

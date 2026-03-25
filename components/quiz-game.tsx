@@ -19,6 +19,14 @@ type ResultTone = 'correct' | 'wrong' | null;
 const STORAGE_KEY = 'face-quiz-progress-v1';
 const MAX_TRIES = 3;
 
+function calcScore(responseMs: number): number {
+  const s = responseMs / 1000;
+  if (s <= 1) return 100;
+  if (s <= 3) return Math.round(100 - 30 * (s - 1) / 2);
+  if (s <= 5) return Math.round(70 - 20 * (s - 3) / 2);
+  return 50;
+}
+
 function loadProgress(): QuizProgressMap {
   if (typeof window === 'undefined') return {};
   try {
@@ -47,6 +55,8 @@ export function QuizGame() {
   const [guess, setGuess] = useState('');
   const [sessionCorrect, setSessionCorrect] = useState(0);
   const [sessionWrong, setSessionWrong] = useState(0);
+  const [sessionScores, setSessionScores] = useState<number[]>([]);
+  const [lastScore, setLastScore] = useState<number | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [resultTone, setResultTone] = useState<ResultTone>(null);
   const [attemptNumber, setAttemptNumber] = useState(1);
@@ -76,6 +86,7 @@ export function QuizGame() {
     setResultMessage(null);
     setResultTone(null);
     setAttemptNumber(1);
+    setLastScore(null);
   }
 
   function scheduleNextQuestion(currentId?: string, nextProgress?: QuizProgressMap) {
@@ -165,6 +176,10 @@ export function QuizGame() {
     const nextProgress = applyAttempt(progress, currentFace.id, correct, responseMs);
     setProgress(nextProgress);
     saveProgress(nextProgress);
+
+    const score = correct ? calcScore(responseMs) : 0;
+    setLastScore(score);
+    setSessionScores((prev) => [...prev, score]);
 
     if (correct) {
       setSessionCorrect((v) => v + 1);
@@ -342,7 +357,12 @@ export function QuizGame() {
 
           {resultMessage && (
             <div className={`quiz-result-message ${resultTone ?? ''}`}>
-              {resultMessage}
+              <span>{resultMessage}</span>
+              {lastScore !== null && (
+                <span className={`score-badge score-badge-${resultTone ?? 'wrong'}`}>
+                  {lastScore}점
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -372,6 +392,17 @@ export function QuizGame() {
                 <span>정답률</span>
                 <span className="quiz-stat-value">
                   {Math.round((sessionCorrect / (sessionCorrect + sessionWrong)) * 100)}%
+                </span>
+              </div>
+            </>
+          )}
+          {sessionScores.length > 0 && (
+            <>
+              <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
+              <div className="quiz-stat">
+                <span>평균점수</span>
+                <span className="quiz-stat-value" style={{ color: 'var(--primary)' }}>
+                  {Math.round(sessionScores.reduce((a, b) => a + b, 0) / sessionScores.length)}점
                 </span>
               </div>
             </>
