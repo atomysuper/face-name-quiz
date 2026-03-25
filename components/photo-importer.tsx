@@ -57,6 +57,7 @@ export function PhotoImporter() {
     startClientY: number;
     startBox: BoundingBox;
   } | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -189,13 +190,7 @@ export function PhotoImporter() {
     setResizeDrag(null);
   }
 
-  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
+  async function processFile(file: File) {
     setDetecting(true);
     setErrorMessage(null);
     setMessage(null);
@@ -222,6 +217,28 @@ export function PhotoImporter() {
     } finally {
       setDetecting(false);
     }
+  }
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file) void processFile(file);
+  }
+
+  function handleDropZoneDragOver(e: React.DragEvent<HTMLLabelElement>) {
+    e.preventDefault();
+    setIsDragOver(true);
+  }
+
+  function handleDropZoneDragLeave(e: React.DragEvent<HTMLLabelElement>) {
+    e.preventDefault();
+    setIsDragOver(false);
+  }
+
+  function handleDropZoneDrop(e: React.DragEvent<HTMLLabelElement>) {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) void processFile(file);
   }
 
   function handleRemoveCrop(cropId: string) {
@@ -458,18 +475,53 @@ export function PhotoImporter() {
   return (
     <section className="stack-lg">
       <div className="card stack-md">
-        <div className="stack-xs">
-          <label className="label" htmlFor="group-photo">
-            단체사진 업로드
-          </label>
+        <label
+          htmlFor="group-photo"
+          className={`upload-zone${isDragOver ? ' upload-zone-active' : ''}${selectedFile ? ' upload-zone-filled' : ''}`}
+          onDragOver={handleDropZoneDragOver}
+          onDragLeave={handleDropZoneDragLeave}
+          onDrop={handleDropZoneDrop}
+        >
+          <div className="upload-zone-icon">
+            {detecting ? (
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              </svg>
+            ) : selectedFile ? (
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+              </svg>
+            ) : (
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+              </svg>
+            )}
+          </div>
+          <div className="upload-zone-text">
+            {detecting ? (
+              <span className="upload-zone-main">얼굴을 인식하는 중…</span>
+            ) : selectedFile ? (
+              <>
+                <span className="upload-zone-main">{selectedFile.name}</span>
+                <span className="upload-zone-sub">다른 파일로 바꾸려면 클릭하거나 드래그하세요</span>
+              </>
+            ) : (
+              <>
+                <span className="upload-zone-main">사진을 여기에 드래그하거나 클릭해서 선택</span>
+                <span className="upload-zone-sub">JPG · PNG · WEBP · HEIC 지원</span>
+              </>
+            )}
+          </div>
           <input
             id="group-photo"
-            className="input"
             type="file"
             accept="image/*"
+            style={{ display: 'none' }}
             onChange={handleFileChange}
+            disabled={detecting}
           />
-        </div>
+        </label>
 
         <div className="stack-xs">
           <label className="label" htmlFor="photo-label">
