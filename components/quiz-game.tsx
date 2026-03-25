@@ -445,7 +445,7 @@ export function QuizGame() {
           )}
         </div>
 
-        {sessionCorrect >= 10 && (
+        {sessionCorrect >= 5 && (
           <div className="ranking-register-section">
             {rankingState === 'idle' && (
               <button className="button primary" type="button" onClick={() => setRankingState('entering')}>

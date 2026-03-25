@@ -29,8 +29,8 @@ export async function POST(request: Request) {
     if (!nickname) {
       return NextResponse.json({ error: '닉네임을 입력해주세요.' }, { status: 400 });
     }
-    if (correctCount < 10) {
-      return NextResponse.json({ error: '10개 이상 맞혀야 등록할 수 있습니다.' }, { status: 400 });
+    if (correctCount < 5) {
+      return NextResponse.json({ error: '5개 이상 맞혀야 등록할 수 있습니다.' }, { status: 400 });
     }
 
     await createRanking({ nickname, score, correctCount });
