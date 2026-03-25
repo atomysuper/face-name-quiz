@@ -92,11 +92,17 @@ export function QuizGame() {
   function scheduleNextQuestion(currentId?: string, nextProgress?: QuizProgressMap) {
     if (nextTimerRef.current) window.clearTimeout(nextTimerRef.current);
 
+    // 다음 얼굴을 지금 바로 선택하고 이미지를 미리 로드 (900ms 대기 중 캐시에 올림)
+    const activeFaces = facesRef.current;
+    const activeProgress = nextProgress ?? progressRef.current;
+    const nextFace = selectNextFace(activeFaces, activeProgress, currentId);
+    if (nextFace) {
+      const img = new window.Image();
+      img.src = nextFace.cropUrl;
+    }
+
     nextTimerRef.current = window.setTimeout(() => {
-      const activeFaces = facesRef.current;
-      const activeProgress = nextProgress ?? progressRef.current;
       const activeMode = modeRef.current;
-      const nextFace = selectNextFace(activeFaces, activeProgress, currentId);
       if (!nextFace) return;
 
       setCurrentFace(nextFace);
@@ -150,6 +156,11 @@ export function QuizGame() {
             startedAtRef.current = Date.now();
             setChoices(approved.length >= 4 ? buildMultipleChoiceOptions(approved, first) : []);
           }
+          // 첫 화면 로드 시 상위 이미지 몇 장 미리 캐시
+          approved.slice(0, 8).forEach((f) => {
+            const img = new window.Image();
+            img.src = f.cropUrl;
+          });
         }
       } catch (error) {
         setErrorMessage(toErrorMessage(error));
