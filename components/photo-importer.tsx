@@ -39,7 +39,7 @@ function overlaps(a: BoundingBox, b: BoundingBox) {
   return x2 > x1 && y2 > y1;
 }
 
-export function PhotoImporter() {
+export function PhotoImporter({ apiEndpoint = '/api/admin/import-photo' }: { apiEndpoint?: string } = {}) {
   const [label, setLabel] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
@@ -504,7 +504,7 @@ export function PhotoImporter() {
 
       formData.append('faces', JSON.stringify(faceMetadata));
 
-      const response = await fetch('/api/admin/import-photo', {
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         body: formData,
       });
