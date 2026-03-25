@@ -952,15 +952,14 @@ p { margin: 0; }
 .adjust-banner {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 8px;
   background: #FFF8E8;
   border: 1.5px solid #F59E0B;
   border-radius: var(--radius-sm);
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #92400E;
+  padding: 6px 12px;
+  min-height: 40px;
 }
 
 .face-card-adjusting {

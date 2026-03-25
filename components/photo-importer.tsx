@@ -713,18 +713,16 @@ export function PhotoImporter() {
             </div>
           </div>
           {/* 위치 조정 컨트롤 — 사진 아래 고정, visibility로 공간 항상 유지 */}
-          <div className="adjust-banner" style={{ visibility: adjustingCropId && adjustBox ? 'visible' : 'hidden' }}>
-            <span>
-              {adjustingCropId
-                ? `#${activeCrops.findIndex((c) => c.id === adjustingCropId) + 1}번 얼굴 — 모서리·가장자리 드래그로 범위 조정, 상자 안 드래그로 이동`
-                : '\u00A0'}
-            </span>
-            <div className="row gap-sm" style={{ marginLeft: 'auto', flexShrink: 0 }}>
-              <button className="button primary" type="button" style={{ padding: '3px 14px', fontSize: 13 }} onClick={() => void handleApplyAdjust()}>
+          <div className="adjust-banner" style={{ visibility: adjustingCropId && adjustBox ? 'visible' : 'hidden', padding: '6px 12px' }}>
+            <div className="row gap-sm" style={{ marginLeft: 'auto' }}>
+              <button className="button primary" type="button" style={{ padding: '4px 16px', fontSize: 13 }} onClick={() => void handleApplyAdjust()}>
                 적용
               </button>
-              <button className="button ghost" type="button" style={{ padding: '3px 12px', fontSize: 13 }} onClick={handleCancelAdjust}>
+              <button className="button ghost" type="button" style={{ padding: '4px 14px', fontSize: 13 }} onClick={handleCancelAdjust}>
                 취소
+              </button>
+              <button className="button danger" type="button" style={{ padding: '4px 14px', fontSize: 13 }} onClick={() => { if (adjustingCropId) { handleRemoveCrop(adjustingCropId); handleCancelAdjust(); } }}>
+                삭제
               </button>
             </div>
           </div>
