@@ -448,7 +448,7 @@ export function PhotoImporter() {
     }
   }
 
-  function renderOverlayBox(box: BoundingBox, key: string, tone: 'auto' | 'manual' | 'draft' | 'adjusting') {
+  function renderOverlayBox(box: BoundingBox, key: string, tone: 'auto' | 'manual' | 'draft' | 'adjusting', cropId?: string) {
     if (!imageSize) {
       return null;
     }
@@ -464,6 +464,9 @@ export function PhotoImporter() {
       tone === 'draft'     ? 'rgba(217,72,95,0.12)' :
                              'rgba(34,103,255,0.12)';
 
+    // 수동 추가 모드·리사이즈 모드가 아닐 때 박스를 클릭해서 위치 조정 진입
+    const clickable = !!cropId && !manualMode && !adjustBox;
+
     return (
       <div
         key={key}
@@ -476,7 +479,11 @@ export function PhotoImporter() {
           borderColor: color,
           borderWidth: tone === 'adjusting' ? '3px' : '2px',
           background,
+          pointerEvents: clickable ? 'auto' : 'none',
+          cursor: clickable ? 'pointer' : 'default',
         }}
+        onClick={clickable && cropId ? (e) => { e.stopPropagation(); handleStartAdjust(cropId); } : undefined}
+        title={clickable ? '클릭해서 위치 조정' : undefined}
       />
     );
   }
@@ -636,6 +643,7 @@ export function PhotoImporter() {
                     crop.bbox,
                     crop.id,
                     crop.source === 'manual' ? 'manual' : 'auto',
+                    crop.id,
                   ),
                 )}
                 {draftBox ? renderOverlayBox(draftBox, 'draft', 'draft') : null}
