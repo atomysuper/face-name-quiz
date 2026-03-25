@@ -21,10 +21,10 @@ const MAX_TRIES = 3;
 
 function calcScore(responseMs: number): number {
   const s = responseMs / 1000;
-  if (s <= 1) return 100;
-  if (s <= 3) return Math.round(100 - 30 * (s - 1) / 2);
-  if (s <= 5) return Math.round(70 - 20 * (s - 3) / 2);
-  return 50;
+  if (s <= 1) return 120;
+  if (s <= 3) return Math.round(120 - 20 * (s - 1) / 2);
+  if (s <= 5) return Math.round(100 - 30 * (s - 3) / 2);
+  return 70;
 }
 
 function loadProgress(): QuizProgressMap {
