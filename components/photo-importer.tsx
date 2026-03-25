@@ -84,6 +84,20 @@ export function PhotoImporter() {
     };
   }, []);
 
+  // 위치 조정 모드에서 엔터 → 적용
+  useEffect(() => {
+    if (!adjustBox) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleApplyAdjust();
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adjustBox, adjustingCropId, selectedFile]);
+
   const activeCrops = crops;
   const draftBox = useMemo(() => {
     if (!dragState || !imageSize) {
