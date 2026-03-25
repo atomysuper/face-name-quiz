@@ -493,7 +493,7 @@ p { margin: 0; }
 }
 
 .face-card img, .review-card img, .quiz-face-card img {
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 3 / 4;
   object-fit: cover;
   object-position: top center;
   background: var(--surface-subtle);

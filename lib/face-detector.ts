@@ -64,7 +64,7 @@ function expandBoundingBox(box: BoundingBox, imageWidth: number, imageHeight: nu
   const padTop    = Math.max(box.h * 0.60, 20);
   const padBottom = Math.max(box.h * 0.60, 20);
 
-  return clampBox(
+  let expanded = clampBox(
     {
       x: box.x - padLeft,
       y: box.y - padTop,
@@ -74,6 +74,24 @@ function expandBoundingBox(box: BoundingBox, imageWidth: number, imageHeight: nu
     imageWidth,
     imageHeight,
   );
+
+  // 3:4 (가로:세로) 비율로 맞추기 — 중심 고정, 짧은 쪽을 늘림
+  const TARGET_RATIO = 3 / 4;
+  const cx = expanded.x + expanded.w / 2;
+  const cy = expanded.y + expanded.h / 2;
+  const currentRatio = expanded.w / expanded.h;
+
+  if (currentRatio > TARGET_RATIO) {
+    // 가로가 상대적으로 넓으면 세로를 늘림
+    const newH = expanded.w / TARGET_RATIO;
+    expanded = clampBox({ x: expanded.x, y: cy - newH / 2, w: expanded.w, h: newH }, imageWidth, imageHeight);
+  } else {
+    // 세로가 상대적으로 길면 가로를 늘림
+    const newW = expanded.h * TARGET_RATIO;
+    expanded = clampBox({ x: cx - newW / 2, y: expanded.y, w: newW, h: expanded.h }, imageWidth, imageHeight);
+  }
+
+  return expanded;
 }
 
 function intersectionOverUnion(a: BoundingBox, b: BoundingBox): number {
@@ -140,29 +158,20 @@ function extractBoxesFromCanvas(
   // expandBoundingBox는 전체 이미지 크기를 알 수 있는 detectBoxes 에서 적용합니다.
   return (result.detections ?? [])
     .map((detection) => {
-      // keypoints(눈·코·입·귀)의 tight 박스를 얼굴 외곽선으로 사용합니다.
-      // 외곽선 엣지에서 상하좌우 60% 패딩을 별도로 적용합니다.
+      // 눈(0,1)·코(2)·입(3) 4개가 모두 있어야 유효한 얼굴로 인식
       const kps = detection.keypoints;
-      if (kps && kps.length >= 4) {
-        const xs = kps.map((kp) => kp.x * canvas.width);
-        const ys = kps.map((kp) => kp.y * canvas.height);
-        const x0 = Math.min(...xs), x1 = Math.max(...xs);
-        const y0 = Math.min(...ys), y1 = Math.max(...ys);
-        return {
-          x: (x0 / canvas.width) * sourceWidth + offsetX,
-          y: (y0 / canvas.height) * sourceHeight + offsetY,
-          w: ((x1 - x0) / canvas.width) * sourceWidth,
-          h: ((y1 - y0) / canvas.height) * sourceHeight,
-        };
-      }
-      // keypoints가 없을 때 boundingBox 폴백
-      const box = detection.boundingBox;
-      if (!box) return null;
+      if (!kps || kps.length < 4) return null;
+      // 귀(4,5)는 제외하고 눈·코·입만으로 외곽선 tight 박스를 계산
+      const facePts = kps.slice(0, 4);
+      const xs = facePts.map((kp) => kp.x * canvas.width);
+      const ys = facePts.map((kp) => kp.y * canvas.height);
+      const x0 = Math.min(...xs), x1 = Math.max(...xs);
+      const y0 = Math.min(...ys), y1 = Math.max(...ys);
       return {
-        x: (box.originX / canvas.width) * sourceWidth + offsetX,
-        y: (box.originY / canvas.height) * sourceHeight + offsetY,
-        w: (box.width / canvas.width) * sourceWidth,
-        h: (box.height / canvas.height) * sourceHeight,
+        x: (x0 / canvas.width) * sourceWidth + offsetX,
+        y: (y0 / canvas.height) * sourceHeight + offsetY,
+        w: ((x1 - x0) / canvas.width) * sourceWidth,
+        h: ((y1 - y0) / canvas.height) * sourceHeight,
       };
     })
     .filter(Boolean) as BoundingBox[];
