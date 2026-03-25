@@ -3,6 +3,7 @@ create table if not exists public.rankings (
   nickname text not null,
   score integer not null,
   correct_count integer not null,
+  mode text not null default 'multiple-choice',
   created_at timestamptz not null default now()
 );
 

@@ -1271,3 +1271,27 @@ p { margin: 0; }
 .rankings-table tr.ranking-top td {
   background: color-mix(in srgb, var(--primary) 5%, transparent);
 }
+
+.mode-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.mode-badge-mc {
+  background: #EEF2FF;
+  color: #4338CA;
+}
+
+.mode-badge-hint {
+  background: #FFF7ED;
+  color: #C2410C;
+}
+
+.mode-badge-typed {
+  background: #F0FDF4;
+  color: #15803D;
+}

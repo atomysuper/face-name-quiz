@@ -75,5 +75,6 @@ export type RankingRecord = {
   nickname: string;
   score: number;
   correctCount: number;
+  mode: string;
   createdAt: string;
 };

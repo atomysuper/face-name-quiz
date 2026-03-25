@@ -249,11 +249,13 @@ export function QuizGame() {
     if (!nickname) return;
     setRankingState('submitting');
     try {
-      const totalScore = sessionScores.reduce((a, b) => a + b, 0);
+      const avgScore = sessionScores.length > 0
+        ? Math.round(sessionScores.reduce((a, b) => a + b, 0) / sessionScores.length)
+        : 0;
       const res = await fetch('/api/rankings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname, score: totalScore, correctCount: sessionCorrect }),
+        body: JSON.stringify({ nickname, score: avgScore, correctCount: sessionCorrect, mode }),
       });
       const data = await res.json() as { error?: string };
       if (!res.ok) throw new Error(data.error ?? '등록 실패');
